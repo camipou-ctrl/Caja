@@ -1,6 +1,6 @@
 // Guarda la app en la PC para que abra sin internet.
 // Al publicar una versión nueva, cambia el número de CACHE.
-const CACHE = 'caja-v3';
+const CACHE = 'caja-v4';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

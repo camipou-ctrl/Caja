@@ -157,6 +157,21 @@ tr.clic{cursor:pointer}tr.clic:hover td{background:#f5f8f8}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;z-index:30;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.2)}
 .toast.err{background:var(--err)}
 
+/* Ticket (solo se ve al imprimir) */
+#ticket{display:none}
+@media print{
+  body>*:not(#ticket){display:none!important}
+  body{background:#fff}
+  #ticket{display:block;color:#000;font:12px/1.35 "Courier New",Courier,monospace}
+}
+.t-c{text-align:center}.t-g{font-size:14px;font-weight:700}.t-b{font-weight:700}.t-p{font-size:10px}
+.t-l{border-top:1px dashed #000;margin:5px 0}
+.t-f{display:flex;justify-content:space-between;gap:6px}.t-f span:last-child{white-space:nowrap}
+tr.anulada td{color:var(--suave)}
+tr.anulada td.n:last-child{text-decoration:line-through}
+.tag-anulada{font-size:11px;font-weight:700;color:var(--err);background:var(--err-2);padding:1px 6px;border-radius:4px}
+.btn-texto.rojo{color:var(--err)}
+
 @media (max-width:980px){
   .vender,.caja-grid,.dos,.tres{grid-template-columns:1fr}
   .col-venta{position:static}
@@ -185,6 +200,8 @@ tr.clic{cursor:pointer}tr.clic:hover td{background:#f5f8f8}
 <main id="vista"></main>
 <div id="modal" class="modal oculto" role="dialog" aria-modal="true"><div class="modal-caja" id="modalCaja"></div></div>
 <div id="toast" class="toast oculto" role="status"></div>
+<div id="ticket"></div>
+<style id="estiloTicket"></style>
 
 <script>
 'use strict';
@@ -295,7 +312,8 @@ function leer(store, key) {
    ================================================================ */
 const nuevoCarrito = () => ({ items: [], dgTipo: '%', dgValor: '', motivo: '', motivoOtro: '' });
 const S = {
-  ajustes: { url: '', clave: '', dispositivo: '', tasa: 0, tasaFecha: '', ultimoCajero: '' },
+  ajustes: { url: '', clave: '', dispositivo: '', tasa: 0, tasaFecha: '', ultimoCajero: '', pinAnular: '',
+    ticket: { encabezado: '', pie: '¡Gracias por su compra!', ancho: '80', auto: false } },
   catalogo: { productos: [], config: null, fecha: null },
   caja: { abierta: false },
   contadores: { V: 0, T: 0 },
@@ -375,6 +393,8 @@ function catalogo() {
       }
     } else if (o.tipo === 'venta') {
       (d.items || []).forEach(i => { const p = mapa.get(String(i.codigo).toLowerCase()); if (p) p.stock -= i.cantidad; });
+    } else if (o.tipo === 'anularVenta') {
+      (d.items || []).forEach(i => { const p = mapa.get(String(i.codigo).toLowerCase()); if (p) p.stock += i.cantidad; });
     }
   });
   _cat = Array.from(mapa.values()).map(p => Object.assign(p, { stock: r3(p.stock) }))
@@ -517,7 +537,7 @@ function vistaVender() {
       <div id="listaProd" class="lista-prod"></div>
     </section>
     <section class="panel col-venta">
-      <div class="cab"><h2>Venta actual</h2><button class="btn-texto" onclick="vaciarCarrito()">Vaciar</button></div>
+      <div class="cab"><h2>Venta actual</h2><div><button class="btn-texto" onclick="imprimirUltimo()" title="Imprime el ticket de la última venta">🖨 Último ticket</button><button class="btn-texto" onclick="vaciarCarrito()">Vaciar</button></div></div>
       <div id="carrito" class="carrito"></div>
       <details class="desc-global" id="dgBox">
         <summary>Descuento a toda la venta</summary>
@@ -726,7 +746,7 @@ function abrirCobro() {
 // Muestra "$" o "Bs" junto al método solo si su nombre no lo dice ya
 function sufijoMoneda(m) {
   const s = m.moneda === 'USD' ? '$' : 'Bs';
-  return /\$|\bbs\b|bol[ií]var|usd|d[oó]lar|zelle/i.test(m.nombre) ? '' : s;
+  return /\$|\bbs\b|bol[ií]var|usd|d[oó]lar|zelle/i.test(m.nombre || m.metodo || '') ? '' : s;
 }
 
 function estadoCobro() {
@@ -799,7 +819,7 @@ async function confirmarVenta() {
     textoVuelto = ' · Vuelto ' + enMoneda(montoV, m.moneda);
   }
   $('btnConfirmar').disabled = true;
-  let id = '';
+  let id = '', registro = null;
   const ok = await cambio(() => {
     S.contadores.V = (S.contadores.V || 0) + 1;
     id = 'V-' + S.ajustes.dispositivo + '-' + String(S.contadores.V).padStart(6, '0');
@@ -809,7 +829,11 @@ async function confirmarVenta() {
       items: c.lineas.map(l => ({ codigo: l.codigo, nombre: l.nombre, cantidad: l.cantidad, precio: l.precio, neto: l.neto, desc: l.desc })),
       pagos, totalUSD: c.total, descUSD: c.desc
     };
-    S.caja.ventas.push({ id, fecha, total: c.total, desc: c.desc, n: c.lineas.length, pagos });
+    registro = {
+      id, fecha, total: c.total, desc: c.desc, n: c.lineas.length, pagos, tasa, motivo, cajero: S.caja.cajero,
+      items: c.lineas.map(l => ({ codigo: l.codigo, nombre: l.nombre, cantidad: l.cantidad, precio: l.precio, neto: l.neto }))
+    };
+    S.caja.ventas.push(registro);
     S.carrito = nuevoCarrito();
     return op('venta', datos);
   });
@@ -817,6 +841,7 @@ async function confirmarVenta() {
   cerrarModal();
   toast('✅ Venta ' + id + ' guardada' + textoVuelto);
   vistaVender();
+  if (S.ajustes.ticket.auto && registro) imprimirTicket(registro);
 }
 
 /* ================================================================
@@ -825,7 +850,8 @@ async function confirmarVenta() {
 function resumenTurno() {
   const k = S.caja, porMetodo = {};
   let total = 0, desc = 0, efUSD = 0, efVES = 0;
-  (k.ventas || []).forEach(v => {
+  const validas = (k.ventas || []).filter(v => !v.anulada);
+  validas.forEach(v => {
     total += v.total; desc += v.desc || 0;
     v.pagos.forEach(p => {
       const key = p.metodo + '|' + p.moneda;
@@ -837,7 +863,7 @@ function resumenTurno() {
   const retUSD = (k.retiros || []).filter(r => r.moneda === 'USD').reduce((s, r) => s + r.monto, 0);
   const retVES = (k.retiros || []).filter(r => r.moneda === 'VES').reduce((s, r) => s + r.monto, 0);
   return {
-    total: r2(total), desc: r2(desc), n: (k.ventas || []).length,
+    total: r2(total), desc: r2(desc), n: validas.length, anuladas: (k.ventas || []).length - validas.length,
     porMetodo: Object.values(porMetodo).map(m => Object.assign(m, { monto: r2(m.monto), usd: r2(m.usd) })).sort((a, b) => b.usd - a.usd),
     efUSD: r2(efUSD), efVES: r2(efVES), retUSD: r2(retUSD), retVES: r2(retVES),
     espUSD: r2((k.fondoUSD || 0) + efUSD - retUSD), espVES: r2((k.fondoVES || 0) + efVES - retVES)
@@ -904,7 +930,7 @@ function pintarCaja() {
     <h2>Turno ${esc(k.turno)}</h2>
     <p class="suave" style="margin:0">${esc(k.cajero)} · abierta ${fechaTxt(k.apertura)} · tasa ${bs(k.tasa)}</p>
     <div class="kpis">
-      <div class="kpi"><div class="v">${usd(r.total)}</div><div class="l">Vendido (${r.n} venta${r.n === 1 ? '' : 's'})</div></div>
+      <div class="kpi"><div class="v">${usd(r.total)}</div><div class="l">Vendido (${r.n} venta${r.n === 1 ? '' : 's'}${r.anuladas ? ' · ' + r.anuladas + ' anulada' + (r.anuladas === 1 ? '' : 's') : ''})</div></div>
       <div class="kpi"><div class="v">${usd(r.desc)}</div><div class="l">Descuentos</div></div>
     </div>
     <table>
@@ -922,10 +948,13 @@ function pintarCaja() {
     </table>`;
   $('retirosLista').innerHTML = (k.retiros || []).length ? `<table><tbody>${k.retiros.slice().reverse().map(x => `<tr><td>${horaTxt(x.fecha)} · ${esc(x.concepto)}</td><td class="n">${enMoneda(x.monto, x.moneda)}</td></tr>`).join('')}</tbody></table>` : '<p class="suave">Sin retiros en este turno.</p>';
   $('ventasTurno').innerHTML = (k.ventas || []).length ? `<table>
-    <thead><tr><th>Hora</th><th>Venta</th><th>Pagos</th><th class="n">Descuento</th><th class="n">Total</th></tr></thead>
-    <tbody>${k.ventas.slice().reverse().map(v => `<tr><td>${horaTxt(v.fecha)}</td><td>${esc(v.id)}</td>
-      <td class="suave">${v.pagos.map(p => (p.tipo === 'Vuelto' ? 'Vuelto ' : '') + esc(p.metodo) + ' ' + enMoneda(Math.abs(p.monto), p.moneda)).join(' · ')}</td>
-      <td class="n">${v.desc > 0 ? usd(v.desc) : ''}</td><td class="n">${usd(v.total)}</td></tr>`).join('')}</tbody></table>` : '<p class="suave">Aún no hay ventas.</p>';
+    <thead><tr><th>Hora</th><th>Venta</th><th>Pagos</th><th class="n">Descuento</th><th></th><th class="n">Total</th></tr></thead>
+    <tbody>${k.ventas.slice().reverse().map(v => `<tr class="${v.anulada ? 'anulada' : ''}"><td>${horaTxt(v.fecha)}</td>
+      <td>${esc(v.id)}${v.anulada ? `<br><span class="tag-anulada">ANULADA</span> <span class="suave">${esc(v.motivoAnulacion || '')}</span>` : ''}</td>
+      <td class="suave">${v.pagos.map(p => (p.tipo === 'Vuelto' ? 'Vuelto ' : '') + esc(p.metodo) + ' ' + (sufijoMoneda(p) ? enMoneda(Math.abs(p.monto), p.moneda) : fmt(Math.abs(p.monto)))).join(' · ')}</td>
+      <td class="n">${v.desc > 0 ? usd(v.desc) : ''}</td>
+      <td class="n">${v.items ? `<button class="btn-texto" onclick="reimprimir('${esc(v.id)}')">Ticket</button>` : ''}${!v.anulada && v.items ? `<button class="btn-texto rojo" onclick="modalAnular('${esc(v.id)}')">Anular</button>` : ''}</td>
+      <td class="n">${usd(v.total)}</td></tr>`).join('')}</tbody></table>` : '<p class="suave">Aún no hay ventas.</p>';
   pintarDiferencia();
 }
 
@@ -994,6 +1023,97 @@ async function cerrarCaja() {
   if (!ok) return;
   toast('🔒 Caja cerrada');
   pintarEstado(); vistaCaja();
+}
+
+/* ---------- Ticket ---------- */
+function ticketHTML(v) {
+  const t = S.ajustes.ticket || {}, c = cfg();
+  const lin = (a, b, cls) => `<div class="t-f ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+  const lineas = txt => String(txt || '').split('\n').map(x => x.trim()).filter(Boolean).map(x => `<div class="t-c">${esc(x)}</div>`).join('');
+  const bruto = r2(v.items.reduce((s, i) => s + i.precio * i.cantidad, 0));
+  return `
+    ${v.anulada ? '<div class="t-c t-g">*** VENTA ANULADA ***</div>' : ''}
+    <div class="t-c t-g">${esc(c.tienda || '')}</div>
+    ${lineas(t.encabezado)}
+    <div class="t-l"></div>
+    <div>Venta: ${esc(v.id)}</div>
+    <div>Fecha: ${new Date(v.fecha).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+    ${v.cajero ? `<div>Cajero: ${esc(v.cajero)}</div>` : ''}
+    <div class="t-l"></div>
+    ${v.items.map(i => `<div>${esc(i.nombre)}</div>` + lin(cant(i.cantidad) + ' x ' + fmt(i.precio), fmt(i.precio * i.cantidad))).join('')}
+    <div class="t-l"></div>
+    ${v.desc > 0 ? lin('Subtotal', usd(bruto)) + lin('Descuento', '-' + usd(v.desc)) + (v.motivo ? `<div class="t-p">(${esc(v.motivo)})</div>` : '') : ''}
+    ${lin('TOTAL', usd(v.total), 't-g')}
+    ${lin('Total Bs', bs(v.total * v.tasa))}
+    <div class="t-p">Tasa: ${fmt(v.tasa)} Bs/$</div>
+    <div class="t-l"></div>
+    ${v.pagos.map(p => lin(esc((p.tipo === 'Vuelto' ? 'Vuelto ' : '') + p.metodo), enMoneda(Math.abs(p.monto), p.moneda))).join('')}
+    <div class="t-l"></div>
+    ${lineas(t.pie)}
+    <div class="t-c t-p">Documento no fiscal</div>`;
+}
+function imprimirTicket(v) {
+  if (!v || !v.items) return toast('Esa venta no tiene el detalle para imprimir.', 'err');
+  const ancho = (S.ajustes.ticket || {}).ancho === '58' ? 48 : 72;
+  $('estiloTicket').textContent = '@media print{@page{margin:2mm}#ticket{width:' + ancho + 'mm}}';
+  $('ticket').innerHTML = ticketHTML(v);
+  setTimeout(() => window.print(), 60);
+}
+function imprimirUltimo() {
+  const v = (S.caja.ventas || []).filter(x => !x.anulada && x.items).slice(-1)[0];
+  if (!v) return toast('No hay ventas en este turno para imprimir.', 'err');
+  imprimirTicket(v);
+}
+function reimprimir(id) { imprimirTicket((S.caja.ventas || []).find(v => v.id === id)); }
+
+/* ---------- Anular venta ---------- */
+const MOTIVOS_ANULACION = ['Error al registrar la venta', 'El cliente desistió de la compra', 'Cobro duplicado', 'Producto defectuoso', 'Otro'];
+function modalAnular(id) {
+  const v = (S.caja.ventas || []).find(x => x.id === id);
+  if (!v || v.anulada) return;
+  const neto = {};
+  v.pagos.forEach(p => {
+    const k = p.metodo + '|' + p.moneda;
+    if (!neto[k]) neto[k] = { metodo: p.metodo, moneda: p.moneda, monto: 0 };
+    neto[k].monto = r2(neto[k].monto + p.monto);
+  });
+  const pasos = Object.values(neto).filter(x => Math.abs(x.monto) >= 0.005).map(x => x.monto > 0
+    ? `Devuelve al cliente <b>${enMoneda(x.monto, x.moneda)}</b> (${esc(x.metodo)})`
+    : `Recupera del cliente <b>${enMoneda(-x.monto, x.moneda)}</b> que se le dio de vuelto (${esc(x.metodo)})`);
+  abrirModal(`
+    <div class="modal-cab"><h2>Anular venta ${esc(id)}</h2><button class="x" onclick="cerrarModal()" aria-label="Cerrar">✕</button></div>
+    <p class="suave" style="margin-top:0">${horaTxt(v.fecha)} · ${usd(v.total)} · ${v.n} producto${v.n === 1 ? '' : 's'}</p>
+    <div class="sug">${pasos.join('<br>') || 'Esta venta no tiene pagos registrados.'}<br><span class="suave">Los productos vuelven al inventario y la venta deja de contar en la caja.</span></div>
+    <label for="anMotivo">Motivo de la anulación</label>
+    <select id="anMotivo"><option value="">Elige un motivo…</option>${MOTIVOS_ANULACION.map(m => `<option>${esc(m)}</option>`).join('')}</select>
+    <input id="anOtro" class="oculto" placeholder="Escribe el motivo" style="margin-top:6px">
+    ${S.ajustes.pinAnular ? '<label for="anPin">PIN de autorización</label><input id="anPin" type="password" inputmode="numeric" autocomplete="off">' : ''}
+    <div class="acciones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn peligro" id="anBtn" onclick="anularVenta('${esc(id)}')">Anular venta</button></div>`);
+  $('anMotivo').addEventListener('change', () => {
+    const otro = $('anMotivo').value === 'Otro';
+    $('anOtro').classList.toggle('oculto', !otro);
+    if (otro) $('anOtro').focus();
+  });
+}
+async function anularVenta(id) {
+  const v = (S.caja.ventas || []).find(x => x.id === id);
+  if (!v || v.anulada || !v.items) return;
+  let motivo = $('anMotivo').value;
+  if (motivo === 'Otro') motivo = $('anOtro').value.trim();
+  if (!motivo) return toast('Indica el motivo de la anulación.', 'err');
+  if (S.ajustes.pinAnular && $('anPin').value !== S.ajustes.pinAnular) return toast('PIN incorrecto.', 'err');
+  $('anBtn').disabled = true;
+  const ok = await cambio(() => {
+    const venta = S.caja.ventas.find(x => x.id === id);
+    const fecha = new Date().toISOString();
+    Object.assign(venta, { anulada: true, motivoAnulacion: motivo, fechaAnulacion: fecha });
+    return op('anularVenta', {
+      id, fecha, motivo, usuario: S.caja.cajero || '',
+      items: venta.items.map(i => ({ codigo: i.codigo, nombre: i.nombre, cantidad: i.cantidad }))
+    });
+  });
+  if (!ok) { $('anBtn').disabled = false; return; }
+  cerrarModal(); toast('Venta ' + id + ' anulada'); pintarCaja();
 }
 
 /* ================================================================
@@ -1206,7 +1326,26 @@ function vistaAjustes() {
       <p class="suave" style="margin-top:16px">Código de esta caja: <b>${esc(S.ajustes.dispositivo)}</b></p>
       <button class="btn peligro" style="width:100%;margin-top:8px" onclick="restablecer()">Borrar datos de esta PC</button>
     </section>
+    <section class="panel">
+      <h2>Ticket</h2>
+      <label for="tkEnc">Encabezado (RIF, dirección, teléfono)</label>
+      <textarea id="tkEnc" rows="3" placeholder="J-12345678-9&#10;Av. Principal, local 3&#10;0414-0000000">${esc(S.ajustes.ticket.encabezado)}</textarea>
+      <label for="tkPie">Mensaje al pie</label>
+      <textarea id="tkPie" rows="2">${esc(S.ajustes.ticket.pie)}</textarea>
+      <label for="tkAncho">Ancho del papel</label>
+      <select id="tkAncho"><option value="80">80 mm</option><option value="58">58 mm</option></select>
+      <label class="check"><input type="checkbox" id="tkAuto" ${S.ajustes.ticket.auto ? 'checked' : ''}> Imprimir el ticket automáticamente al cobrar</label>
+      <div class="fila" style="margin-top:14px"><button class="btn" onclick="ticketPrueba()">Imprimir prueba</button><button class="btn pri" onclick="guardarTicket()">Guardar</button></div>
+    </section>
+    <section class="panel">
+      <h2>Anulaciones</h2>
+      <p class="suave" style="margin-top:0">Si pones un PIN, se pedirá para anular ventas. Déjalo vacío para no pedirlo.</p>
+      <label for="tkPin">PIN para anular</label>
+      <input id="tkPin" type="password" inputmode="numeric" autocomplete="new-password" value="${esc(S.ajustes.pinAnular || '')}">
+      <button class="btn pri grande" onclick="guardarPin()">Guardar PIN</button>
+    </section>
   </div>`;
+  $('tkAncho').value = S.ajustes.ticket.ancho === '58' ? '58' : '80';
   pintarAjustesEstado();
 }
 function pintarAjustesEstado() {
@@ -1230,6 +1369,28 @@ async function guardarConexion() {
   if (url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) return toast('La URL debe ser la de tu aplicación web de Apps Script.', 'err');
   const ok = await cambio(() => { S.ajustes.url = url; S.ajustes.clave = clave; return null; });
   if (ok) sincronizar(true);
+}
+async function guardarTicket() {
+  const ok = await cambio(() => {
+    S.ajustes.ticket = { encabezado: $('tkEnc').value.trim(), pie: $('tkPie').value.trim(), ancho: $('tkAncho').value, auto: $('tkAuto').checked };
+    return null;
+  });
+  if (ok) toast('✅ Ticket guardado');
+}
+async function guardarPin() {
+  const pin = $('tkPin').value.trim();
+  const ok = await cambio(() => { S.ajustes.pinAnular = pin; return null; });
+  if (ok) toast(pin ? '✅ PIN guardado' : 'PIN desactivado');
+}
+function ticketPrueba() {
+  const antes = S.ajustes.ticket;
+  S.ajustes.ticket = { encabezado: $('tkEnc').value, pie: $('tkPie').value, ancho: $('tkAncho').value, auto: false };
+  imprimirTicket({
+    id: 'V-PRUEBA', fecha: new Date().toISOString(), cajero: S.caja.cajero || 'Cajero', tasa: S.ajustes.tasa || 1, total: 3.8, desc: 0.2, motivo: 'Promoción',
+    items: [{ nombre: 'Producto de ejemplo', cantidad: 2, precio: 1.4 }, { nombre: 'Otro producto', cantidad: 1, precio: 1.2 }],
+    pagos: [{ tipo: 'Pago', metodo: 'Efectivo $', moneda: 'USD', monto: 5 }, { tipo: 'Vuelto', metodo: 'Efectivo $', moneda: 'USD', monto: -1.2 }]
+  });
+  S.ajustes.ticket = antes;
 }
 async function limpiarErrores() {
   S.sync.errores = [];
@@ -1285,6 +1446,7 @@ async function iniciar() {
     leer('kv', 'ajustes'), leer('kv', 'catalogo'), leer('kv', 'caja'), leer('kv', 'contadores'), leer('kv', 'carrito'), leer('kv', 'sync'), leer('cola')
   ]);
   if (aj) Object.assign(S.ajustes, aj);
+  S.ajustes.ticket = Object.assign({ encabezado: '', pie: '¡Gracias por su compra!', ancho: '80', auto: false }, S.ajustes.ticket || {});
   if (cat) S.catalogo = cat;
   if (caja) S.caja = caja;
   if (cont) S.contadores = cont;
