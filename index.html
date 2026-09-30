@@ -400,6 +400,16 @@ function sugerido(costo, categoria) {
 let _tSync;
 function programarSync() { clearTimeout(_tSync); _tSync = setTimeout(() => sincronizar(false), 1500); }
 
+// Extrae el mensaje legible de una página de error de Google
+function textoDeError(html) {
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script,style').forEach(x => x.remove());
+    const t = (doc.body ? doc.body.textContent : html).replace(/\s+/g, ' ').trim();
+    return t.slice(0, 300) || 'respuesta vacía';
+  } catch (e) { return String(html).slice(0, 200); }
+}
+
 async function sincronizar(manual) {
   if (S.sync.enCurso) return;
   if (!S.ajustes.url || !S.ajustes.clave) {
@@ -416,7 +426,10 @@ async function sincronizar(manual) {
     const timer = setTimeout(() => ctrl.abort(), 45000);
     const r = await fetch(S.ajustes.url, { method: 'POST', body: JSON.stringify({ clave: S.ajustes.clave, url: S.ajustes.url, ops }), signal: ctrl.signal });
     clearTimeout(timer);
-    const res = await r.json();
+    const texto = await r.text();
+    let res;
+    try { res = JSON.parse(texto); }
+    catch (_) { throw new Error('Google respondió con un error: ' + textoDeError(texto)); }
     if (!res.ok) throw new Error(res.error || 'Error del servidor');
 
     const ids = new Set(res.aplicadas || []);
