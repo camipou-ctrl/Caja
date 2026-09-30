@@ -414,7 +414,7 @@ async function sincronizar(manual) {
     const ops = S.cola.slice(0, 150);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45000);
-    const r = await fetch(S.ajustes.url, { method: 'POST', body: JSON.stringify({ clave: S.ajustes.clave, ops }), signal: ctrl.signal });
+    const r = await fetch(S.ajustes.url, { method: 'POST', body: JSON.stringify({ clave: S.ajustes.clave, url: S.ajustes.url, ops }), signal: ctrl.signal });
     clearTimeout(timer);
     const res = await r.json();
     if (!res.ok) throw new Error(res.error || 'Error del servidor');
