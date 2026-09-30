@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5257">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Caja</title>
+<style>
+:root{
+  --tinta:#16262b; --gris:#5d6b70; --suave:#8a979b; --linea:#dde4e6; --fondo:#eef2f2; --blanco:#fff;
+  --marca:#0f5257; --marca-2:#e1eeee; --marca-3:#3f7f83;
+  --ok:#1f7a4d; --ok-2:#e3f1ea; --err:#b42318; --err-2:#fde6e4; --aviso:#8a5d00; --aviso-2:#fff1cc;
+  --r:8px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:15px/1.4 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:10px 11px;border:1px solid #c7d1d3;border-radius:var(--r);background:var(--blanco)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--marca);outline-offset:-1px;border-color:var(--marca)}
+button{cursor:pointer;border:0;background:none}
+button:focus-visible{outline:2px solid var(--marca);outline-offset:2px}
+label{display:block;font-size:12px;color:var(--gris);margin:12px 0 5px}
+h2{font-size:16px;margin:0 0 12px}
+.num{font-variant-numeric:tabular-nums}
+.oculto{display:none!important}
+.suave{color:var(--gris);font-size:13px}
+
+/* Barra superior */
+.barra{position:sticky;top:0;z-index:5;background:var(--marca);color:#fff;display:flex;align-items:center;gap:18px;padding:0 16px;height:56px;padding-top:env(safe-area-inset-top,0)}
+.marca{font-weight:700;font-size:17px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+nav{display:flex;gap:2px;height:100%}
+nav button{color:#cfe3e3;padding:0 14px;height:100%;font-weight:600;font-size:14px;border-bottom:3px solid transparent}
+nav button:hover{color:#fff}
+nav button.activo{color:#fff;border-bottom-color:#fff}
+.estado{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pill{padding:6px 11px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(255,255,255,.14);color:#fff;white-space:nowrap}
+.pill.ok{background:#d9efe4;color:var(--ok)}.pill.aviso{background:var(--aviso-2);color:var(--aviso)}.pill.err{background:var(--err-2);color:var(--err)}
+.pill.gris{background:rgba(255,255,255,.14);color:#fff}
+
+main{padding:16px;max-width:1360px;margin:0 auto}
+.panel{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:16px}
+.fila{display:flex;gap:10px}.fila>*{flex:1;min-width:0}
+.btn{padding:11px 16px;border-radius:var(--r);font-weight:600;font-size:14px;background:#e8eded;color:var(--tinta)}
+.btn:hover{background:#dde4e4}
+.btn.pri{background:var(--marca);color:#fff}.btn.pri:hover{background:#0c4549}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.peligro{background:var(--err-2);color:var(--err)}
+.btn.grande{width:100%;padding:14px;font-size:16px;margin-top:16px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-texto{color:var(--marca);font-weight:600;font-size:13px;padding:4px 6px}
+.acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.aviso-caja{background:var(--aviso-2);color:var(--aviso);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600;font-size:14px}
+.info{background:var(--marca-2);border-radius:var(--r);padding:10px 12px;margin-top:8px;font-size:13px}
+.sug{background:#fff8e6;border:1px solid #f0d9a6;border-radius:var(--r);padding:10px 12px;margin-top:8px;font-size:13px}
+.check{display:flex;gap:8px;align-items:center;margin:8px 0 0;color:var(--tinta);font-size:13px}
+.check input{width:auto}
+.vacio{color:var(--suave);text-align:center;padding:30px 10px}
+
+/* Vender */
+.vender{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(360px,1fr);gap:16px;align-items:start}
+.col-prod{min-height:calc(100vh - 90px)}
+.buscar{font-size:17px;padding:13px 14px}
+.lista-prod{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-top:12px}
+.prod{text-align:left;background:#f7f9f9;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-height:92px}
+.prod:hover{border-color:var(--marca-3);background:#fff}
+.prod:disabled{opacity:.5;cursor:not-allowed}
+.p-nom{font-weight:600;line-height:1.25}
+.p-meta{font-size:12px;color:var(--gris)}
+.p-meta .bajo{color:var(--err);font-weight:600}
+.p-precio{margin-top:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.p-precio small{display:block;font-weight:400;color:var(--gris);font-size:12px}
+.col-venta{position:sticky;top:72px}
+.cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cab h2{margin:0}
+.carrito{max-height:38vh;overflow:auto;margin:0 -4px;padding:0 4px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 104px 64px 78px 28px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--linea)}
+.item-nom{font-weight:600;font-size:14px;line-height:1.25}
+.item-nom small{display:block;font-weight:400;color:var(--gris);font-size:12px}
+.qty{display:flex;align-items:center;border:1px solid #c7d1d3;border-radius:var(--r);overflow:hidden}
+.qty button{width:30px;height:34px;font-size:17px;color:var(--marca);font-weight:700}
+.qty button:hover{background:var(--marca-2)}
+.qty input{border:0;border-radius:0;text-align:center;padding:6px 0;width:40px;flex:1}
+.pct{display:flex;align-items:center;gap:3px;font-size:12px;color:var(--gris)}
+.pct input{padding:6px;text-align:right}
+.item-sub{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+.x{color:var(--suave);font-size:15px;width:28px;height:28px;border-radius:6px}
+.x:hover{color:var(--err);background:var(--err-2)}
+.desc-global{margin-top:12px;font-size:14px}
+.desc-global summary{cursor:pointer;color:var(--marca);font-weight:600;font-size:13px}
+.desc-global .fila{margin-top:8px}
+.desc-global select{flex:0 0 76px}
+.totales{margin-top:14px;border-top:2px solid var(--linea);padding-top:12px}
+.totales .linea{display:flex;justify-content:space-between;color:var(--gris);font-size:13px;margin:2px 0}
+.total-usd{font-size:38px;font-weight:800;letter-spacing:-.5px;color:var(--marca);text-align:right;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums}
+.total-bs{text-align:right;font-size:17px;color:var(--gris);font-variant-numeric:tabular-nums}
+.btn-cobrar{width:100%;margin-top:14px;padding:16px;border-radius:10px;background:var(--ok);color:#fff;font-size:19px;font-weight:700}
+.btn-cobrar:disabled{opacity:.4;cursor:default}
+kbd{font:12px monospace;background:rgba(255,255,255,.2);padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(10,25,28,.5);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow:auto}
+.modal-caja{background:var(--blanco);border-radius:14px;width:100%;max-width:560px;padding:20px 22px}
+.modal-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.modal-cab h2{margin:0;font-size:18px}
+.cobro-total{background:var(--marca-2);border-radius:10px;padding:14px 16px;text-align:center}
+.cobro-total .usd{font-size:34px;font-weight:800;color:var(--marca);font-variant-numeric:tabular-nums}
+.cobro-total .bs{color:var(--gris);font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:8px 12px;border:1px solid #c7d1d3;border-radius:999px;font-size:13px;font-weight:600;background:#fff}
+.chip:hover{border-color:var(--marca);color:var(--marca)}
+.chip small{color:var(--suave);font-weight:400;margin-left:4px}
+.pago-manual{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;margin-top:8px}
+.pagos{margin-top:12px}
+.pago{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linea);font-size:14px}
+.pago .m{font-variant-numeric:tabular-nums;text-align:right}
+.pago .m small{display:block;color:var(--gris);font-size:12px}
+.cobro-estado{margin-top:12px;border-radius:10px;padding:12px 14px;font-weight:700;font-variant-numeric:tabular-nums}
+.cobro-estado.falta{background:var(--aviso-2);color:var(--aviso)}
+.cobro-estado.vuelto{background:#e6effa;color:#1d4f8a}
+.cobro-estado.listo{background:var(--ok-2);color:var(--ok)}
+.cobro-estado small{display:block;font-weight:400;font-size:13px;margin-top:2px}
+.cobro-estado select{margin-top:8px;font-weight:400}
+
+/* Caja */
+.caja-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.caja-grid .ancho{grid-column:1/-1}
+.estrecho{max-width:520px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--gris)}
+.tabla-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--gris);font-weight:600;padding:8px 6px;border-bottom:2px solid var(--linea);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--linea);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.fuerte td{font-weight:700}
+tr.clic{cursor:pointer}tr.clic:hover td{background:#f5f8f8}
+.dif{font-size:18px;font-weight:700;margin-top:10px;font-variant-numeric:tabular-nums}
+.dif.bien{color:var(--ok)}.dif.mal{color:var(--err)}.dif.sobra{color:var(--aviso)}
+
+/* Inventario, productos, ajustes */
+.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.seg{display:flex;background:#e8eded;border-radius:var(--r);padding:3px;margin-bottom:6px}
+.seg button{flex:1;padding:9px;border-radius:6px;font-weight:600;font-size:14px;color:var(--gris)}
+.seg button.activo{background:#fff;color:var(--marca);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.toolbar{display:flex;gap:10px;margin-bottom:12px}
+.toolbar input{flex:1}
+.stock-bajo{color:var(--err);font-weight:700}
+.bajo-sug{color:var(--aviso);font-weight:700}
+.tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.error-sync{font-size:13px;border-left:3px solid var(--err);padding:4px 10px;margin:6px 0;background:#fff7f6}
+
+/* Aviso flotante */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;z-index:30;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.toast.err{background:var(--err)}
+
+@media (max-width:980px){
+  .vender,.caja-grid,.dos,.tres{grid-template-columns:1fr}
+  .col-venta{position:static}
+  .barra{height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
+  nav{order:3;width:100%;overflow-x:auto;height:40px}
+  .estado{margin-left:auto}
+}
+</style>
+</head>
+<body>
+<header class="barra">
+  <div class="marca" id="nombreTienda">Caja</div>
+  <nav id="tabs">
+    <button data-vista="vender" class="activo">Vender</button>
+    <button data-vista="caja">Caja</button>
+    <button data-vista="inventario">Inventario</button>
+    <button data-vista="productos">Productos</button>
+    <button data-vista="ajustes">Ajustes</button>
+  </nav>
+  <div class="estado">
+    <button id="pillTasa" class="pill" onclick="modalTasa()">Tasa —</button>
+    <span id="pillCaja" class="pill gris">Caja cerrada</span>
+    <button id="pillSync" class="pill gris" onclick="sincronizar(true)">…</button>
+  </div>
+</header>
+<main id="vista"></main>
+<div id="modal" class="modal oculto" role="dialog" aria-modal="true"><div class="modal-caja" id="modalCaja"></div></div>
+<div id="toast" class="toast oculto" role="status"></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+   CONFIGURACIÓN BASE (se reemplaza con la de Google Sheets al sincronizar)
+   ================================================================ */
+const CONFIG_BASE = {
+  tienda: 'Mi Tienda',
+  metodos: [
+    { nombre: 'Efectivo $', moneda: 'USD', efectivo: true },
+    { nombre: 'Zelle', moneda: 'USD', efectivo: false },
+    { nombre: 'Efectivo Bs', moneda: 'VES', efectivo: true },
+    { nombre: 'Pago móvil', moneda: 'VES', efectivo: false },
+    { nombre: 'Punto de venta', moneda: 'VES', efectivo: false },
+    { nombre: 'Transferencia Bs', moneda: 'VES', efectivo: false }
+  ],
+  motivosCarga: ['Compra a proveedor', 'Inventario inicial', 'Devolución de cliente', 'Ajuste (+)'],
+  motivosDescarga: ['Merma', 'Producto vencido', 'Producto dañado', 'Uso interno', 'Devolución a proveedor', 'Ajuste (−)'],
+  motivosDescuento: ['Promoción', 'Amigo o familiar', 'Cliente frecuente', 'Compra al mayor', 'Pago en divisas',
+    'Falta de cambio / redondeo', 'Producto por vencer', 'Producto o empaque dañado', 'Empleado', 'Compensación por error o queja', 'Otro'],
+  descMax: 15,
+  precios: { ganancia: 30, colchon: 5, redondeo: 0.05, cats: {} }
+};
+
+/* ================================================================
+   UTILIDADES
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const r3 = n => Math.round((Number(n) + Number.EPSILON) * 1000) / 1000;
+const r4 = n => Math.round((Number(n) + Number.EPSILON) * 10000) / 10000;
+function fmt(n) {
+  const x = Number(n) || 0;
+  const s = Math.abs(x).toFixed(2).split('.');
+  return (x < 0 ? '-' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + s[1];
+}
+const usd = n => '$ ' + fmt(n);
+const bs = n => 'Bs ' + fmt(n);
+const enMoneda = (n, moneda) => moneda === 'USD' ? usd(n) : bs(n);
+const cant = n => String(r3(n)).replace('.', ',');
+function num(s) {
+  if (typeof s === 'number') return s;
+  let t = String(s == null ? '' : s).trim().replace(/\s/g, '');
+  if (!t) return NaN;
+  if (t.includes(',') && t.includes('.')) {
+    t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  } else if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(t)) {
+    t = t.replace(/\./g, ''); // "1.000" o "25.000" = miles
+  } else t = t.replace(',', '.');
+  return Number(t);
+}
+const hoyISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const horaTxt = iso => new Date(iso).toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit' });
+const fechaTxt = iso => new Date(iso).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', hour: 'numeric', minute: '2-digit' });
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+function hace(ms) {
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return 'hace un momento';
+  if (m < 60) return 'hace ' + m + ' min';
+  if (m < 1440) return 'hace ' + Math.round(m / 60) + ' h';
+  return 'hace ' + Math.round(m / 1440) + ' d';
+}
+let _toast;
+function toast(txt, tipo) {
+  const t = $('toast');
+  t.textContent = txt; t.className = 'toast' + (tipo === 'err' ? ' err' : '');
+  clearTimeout(_toast); _toast = setTimeout(() => t.classList.add('oculto'), tipo === 'err' ? 5000 : 3000);
+}
+
+/* ================================================================
+   BASE DE DATOS LOCAL (IndexedDB): sobrevive a cortes de luz
+   ================================================================ */
+const DB = { db: null };
+function abrirDB() {
+  return new Promise((ok, mal) => {
+    const r = indexedDB.open('cajaOffline', 1);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+      if (!db.objectStoreNames.contains('cola')) db.createObjectStore('cola', { keyPath: 'id' });
+    };
+    r.onsuccess = () => { DB.db = r.result; ok(); };
+    r.onerror = () => mal(r.error);
+  });
+}
+function tx(stores, fn) {
+  return new Promise((ok, mal) => {
+    const t = DB.db.transaction(stores, 'readwrite');
+    fn(t);
+    t.oncomplete = () => ok();
+    t.onerror = () => mal(t.error);
+    t.onabort = () => mal(t.error || new Error('No se pudo guardar'));
+  });
+}
+function leer(store, key) {
+  return new Promise((ok, mal) => {
+    const t = DB.db.transaction(store, 'readonly');
+    const r = key === undefined ? t.objectStore(store).getAll() : t.objectStore(store).get(key);
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => mal(r.error);
+  });
+}
+
+/* ================================================================
+   ESTADO
+   ================================================================ */
+const nuevoCarrito = () => ({ items: [], dgTipo: '%', dgValor: '', motivo: '', motivoOtro: '' });
+const S = {
+  ajustes: { url: '', clave: '', dispositivo: '', tasa: 0, tasaFecha: '', ultimoCajero: '' },
+  catalogo: { productos: [], config: null, fecha: null },
+  caja: { abierta: false },
+  contadores: { V: 0, T: 0 },
+  carrito: nuevoCarrito(),
+  cola: [],
+  sync: { ultimo: 0, errores: [], error: '', enCurso: false },
+  vista: 'vender',
+  invTipo: 'Carga',
+  invHist: [],
+  cobro: null
+};
+
+function cfg() {
+  const c = Object.assign({}, CONFIG_BASE, S.catalogo.config || {});
+  if (!Array.isArray(c.metodos) || !c.metodos.length) c.metodos = CONFIG_BASE.metodos;
+  if (!c.precios) c.precios = CONFIG_BASE.precios;
+  ['motivosCarga', 'motivosDescarga', 'motivosDescuento'].forEach(k => { if (!Array.isArray(c[k]) || !c[k].length) c[k] = CONFIG_BASE[k]; });
+  return c;
+}
+const metodo = nombre => cfg().metodos.find(m => m.nombre === nombre);
+
+// Guarda el estado y (opcionalmente) operaciones para enviar, todo en una sola transacción.
+async function guardar(ops) {
+  const lista = (Array.isArray(ops) ? ops : ops ? [ops] : []).map(o => Object.assign(o, { id: uid(), ts: Date.now() }));
+  await tx(['kv', 'cola'], t => {
+    const kv = t.objectStore('kv');
+    kv.put(S.ajustes, 'ajustes'); kv.put(S.caja, 'caja'); kv.put(S.contadores, 'contadores'); kv.put(S.carrito, 'carrito');
+    const cola = t.objectStore('cola');
+    lista.forEach(o => cola.put(o));
+  });
+  S.cola.push(...lista);
+  _cat = null;
+  if (lista.length) programarSync();
+}
+const op = (tipo, datos) => ({ tipo, datos });
+
+// Ejecuta un cambio; si no se puede guardar en disco, deshace el cambio en memoria.
+async function cambio(mutar) {
+  const antes = JSON.stringify({ caja: S.caja, contadores: S.contadores, carrito: S.carrito, ajustes: S.ajustes });
+  try {
+    const ops = mutar();
+    await guardar(ops);
+    return true;
+  } catch (e) {
+    const a = JSON.parse(antes);
+    S.caja = a.caja; S.contadores = a.contadores; S.carrito = a.carrito; S.ajustes = a.ajustes;
+    toast('No se pudo guardar: ' + e.message, 'err');
+    return false;
+  }
+}
+
+let _tCarrito;
+function guardarCarrito() {
+  clearTimeout(_tCarrito);
+  _tCarrito = setTimeout(() => tx(['kv'], t => t.objectStore('kv').put(S.carrito, 'carrito')).catch(() => {}), 400);
+}
+
+/* Catálogo efectivo = lo último recibido del servidor + lo pendiente por enviar */
+let _cat = null;
+function catalogo() {
+  if (_cat) return _cat;
+  const mapa = new Map();
+  (S.catalogo.productos || []).forEach(p => mapa.set(String(p.codigo).toLowerCase(), Object.assign({}, p, { codigo: String(p.codigo) })));
+  S.cola.forEach(o => {
+    const d = o.datos || {};
+    if (o.tipo === 'producto') {
+      const k = String(d.codigo).toLowerCase(), p = mapa.get(k);
+      const campos = { nombre: d.nombre, categoria: d.categoria, precio: d.precio, costo: d.costo, minimo: d.minimo };
+      if (p) Object.assign(p, campos);
+      else mapa.set(k, Object.assign({ codigo: String(d.codigo), stock: Number(d.stockInicial) || 0 }, campos));
+    } else if (o.tipo === 'movimiento') {
+      const p = mapa.get(String(d.codigo).toLowerCase());
+      if (p) {
+        p.stock += d.tipo === 'Carga' ? d.cantidad : -d.cantidad;
+        if (d.costo != null) p.costo = d.costo;
+        if (d.precio != null) p.precio = d.precio;
+      }
+    } else if (o.tipo === 'venta') {
+      (d.items || []).forEach(i => { const p = mapa.get(String(i.codigo).toLowerCase()); if (p) p.stock -= i.cantidad; });
+    }
+  });
+  _cat = Array.from(mapa.values()).map(p => Object.assign(p, { stock: r3(p.stock) }))
+    .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+  return _cat;
+}
+const producto = codigo => catalogo().find(p => p.codigo.toLowerCase() === String(codigo).toLowerCase());
+
+function sugerido(costo, categoria) {
+  if (!(costo > 0)) return null;
+  const pr = cfg().precios;
+  let g = (pr.cats || {})[String(categoria || '').trim().toLowerCase()];
+  if (g === undefined) g = pr.ganancia;
+  const x = costo * (1 + pr.colchon / 100) * (1 + g / 100);
+  const r = pr.redondeo > 0 ? pr.redondeo : 0.01;
+  const pasos = Math.ceil(Math.round(x / r * 1e6) / 1e6);
+  return { precio: Math.round(pasos * r * 100) / 100, ganancia: g };
+}
+
+/* ================================================================
+   SINCRONIZACIÓN CON GOOGLE SHEETS
+   ================================================================ */
+let _tSync;
+function programarSync() { clearTimeout(_tSync); _tSync = setTimeout(() => sincronizar(false), 1500); }
+
+async function sincronizar(manual) {
+  if (S.sync.enCurso) return;
+  if (!S.ajustes.url || !S.ajustes.clave) {
+    if (manual) { toast('Primero conecta el servidor en Ajustes.', 'err'); irA('ajustes'); }
+    pintarEstado(); return;
+  }
+  if (!navigator.onLine) { if (manual) toast('No hay internet. Todo queda guardado en esta PC.', 'err'); pintarEstado(); return; }
+
+  S.sync.enCurso = true; pintarEstado();
+  let seguir = false;
+  try {
+    const ops = S.cola.slice(0, 150);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    const r = await fetch(S.ajustes.url, { method: 'POST', body: JSON.stringify({ clave: S.ajustes.clave, ops }), signal: ctrl.signal });
+    clearTimeout(timer);
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || 'Error del servidor');
+
+    const ids = new Set(res.aplicadas || []);
+    if (ids.size) {
+      await tx(['cola'], t => { const c = t.objectStore('cola'); ids.forEach(id => c.delete(id)); });
+      S.cola = S.cola.filter(o => !ids.has(o.id));
+    }
+    if (Array.isArray(res.errores) && res.errores.length) {
+      S.sync.errores = S.sync.errores.concat(res.errores.map(e => Object.assign({ fecha: new Date().toISOString() }, e))).slice(-30);
+      toast(res.errores.length + ' registro(s) no se pudieron guardar en Sheets. Revisa Ajustes.', 'err');
+    }
+    if (res.catalogo) S.catalogo = { productos: res.catalogo.productos || [], config: res.catalogo.config || null, fecha: new Date().toISOString() };
+    S.sync.ultimo = Date.now(); S.sync.error = '';
+    await tx(['kv'], t => {
+      t.objectStore('kv').put(S.catalogo, 'catalogo');
+      t.objectStore('kv').put({ ultimo: S.sync.ultimo, errores: S.sync.errores }, 'sync');
+    });
+    _cat = null;
+    if (manual) toast('✅ Sincronizado');
+    seguir = S.cola.length > 0 && ids.size > 0;
+  } catch (e) {
+    S.sync.error = e.name === 'AbortError' ? 'El servidor tardó demasiado' : (e instanceof TypeError ? 'Sin conexión con el servidor' : e.message);
+    if (manual) toast('No se pudo sincronizar: ' + S.sync.error, 'err');
+  } finally {
+    S.sync.enCurso = false;
+    pintarEstado(); refrescar();
+    if (seguir) setTimeout(() => sincronizar(false), 300);
+  }
+}
+
+/* ================================================================
+   BARRA SUPERIOR Y NAVEGACIÓN
+   ================================================================ */
+function pintarEstado() {
+  $('nombreTienda').textContent = cfg().tienda || 'Caja';
+  document.title = 'Caja · ' + (cfg().tienda || '');
+
+  const t = $('pillTasa');
+  if (!(S.ajustes.tasa > 0)) { t.textContent = 'Definir tasa'; t.className = 'pill err'; }
+  else {
+    t.textContent = 'Tasa ' + bs(S.ajustes.tasa);
+    t.className = 'pill ' + (S.ajustes.tasaFecha === hoyISO() ? 'gris' : 'aviso');
+    t.title = S.ajustes.tasaFecha === hoyISO() ? 'Tasa de hoy' : 'Esta tasa no es de hoy';
+  }
+
+  const c = $('pillCaja');
+  c.textContent = S.caja.abierta ? 'Caja abierta · ' + S.caja.cajero : 'Caja cerrada';
+  c.className = 'pill ' + (S.caja.abierta ? 'ok' : 'gris');
+
+  const p = $('pillSync'), n = S.cola.length;
+  const pend = n ? n + ' pendiente' + (n === 1 ? '' : 's') : '';
+  if (S.sync.enCurso) { p.textContent = 'Sincronizando…'; p.className = 'pill gris'; }
+  else if (!S.ajustes.url) { p.textContent = 'Sin servidor' + (n ? ' · ' + pend : ''); p.className = 'pill aviso'; }
+  else if (!navigator.onLine) { p.textContent = 'Sin internet' + (n ? ' · ' + pend : ''); p.className = 'pill aviso'; }
+  else if (S.sync.error) { p.textContent = 'Sin conexión' + (n ? ' · ' + pend : ''); p.className = 'pill aviso'; p.title = S.sync.error; }
+  else if (n) { p.textContent = pend; p.className = 'pill aviso'; }
+  else { p.textContent = S.sync.ultimo ? 'Sincronizado ' + hace(S.sync.ultimo) : 'Sin sincronizar'; p.className = 'pill ' + (S.sync.ultimo ? 'ok' : 'gris'); }
+}
+
+function irA(vista) {
+  S.vista = vista;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('activo', b.dataset.vista === vista));
+  ({ vender: vistaVender, caja: vistaCaja, inventario: vistaInventario, productos: vistaProductos, ajustes: vistaAjustes })[vista]();
+}
+
+// Actualiza solo las partes que no son formularios (para no borrar lo que se está escribiendo)
+function refrescar() {
+  if (S.vista === 'vender') { pintarProductos(); pintarCarrito(); pintarAvisoCaja(); }
+  else if (S.vista === 'caja') { if (S.caja.abierta && $('cajaResumen')) pintarCaja(); }
+  else if (S.vista === 'productos') pintarTablaProductos();
+  else if (S.vista === 'ajustes') pintarAjustesEstado();
+  else if (S.vista === 'inventario') infoInv();
+}
+
+/* ================================================================
+   VENDER
+   ================================================================ */
+function vistaVender() {
+  const c = cfg();
+  $('vista').innerHTML = `
+  <div class="vender">
+    <section class="panel col-prod">
+      <div id="avisoCaja"></div>
+      <input id="buscar" class="buscar" placeholder="Buscar producto o escanear código" autocomplete="off" aria-label="Buscar producto">
+      <div id="listaProd" class="lista-prod"></div>
+    </section>
+    <section class="panel col-venta">
+      <div class="cab"><h2>Venta actual</h2><button class="btn-texto" onclick="vaciarCarrito()">Vaciar</button></div>
+      <div id="carrito" class="carrito"></div>
+      <details class="desc-global" id="dgBox">
+        <summary>Descuento a toda la venta</summary>
+        <div class="fila">
+          <select id="dgTipo" aria-label="Tipo de descuento"><option value="%">%</option><option value="monto">$</option></select>
+          <input id="dgValor" inputmode="decimal" placeholder="0" aria-label="Valor del descuento">
+        </div>
+      </details>
+      <div id="motivoBox" class="oculto">
+        <label for="dgMotivo">Motivo del descuento</label>
+        <select id="dgMotivo"><option value="">Elige un motivo…</option>${c.motivosDescuento.map(m => `<option>${esc(m)}</option>`).join('')}</select>
+        <input id="dgOtro" class="oculto" placeholder="Escribe el motivo" style="margin-top:6px">
+      </div>
+      <div id="totales" class="totales"></div>
+      <button class="btn-cobrar" id="btnCobrar" onclick="abrirCobro()">Cobrar <kbd>F2</kbd></button>
+    </section>
+  </div>`;
+
+  const car = S.carrito;
+  $('dgTipo').value = car.dgTipo; $('dgValor').value = car.dgValor;
+  $('dgMotivo').value = car.motivo; $('dgOtro').value = car.motivoOtro;
+  if (num(car.dgValor) > 0) $('dgBox').open = true;
+
+  $('buscar').addEventListener('input', pintarProductos);
+  $('buscar').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const txt = $('buscar').value.trim();
+    if (!txt) return;
+    const exacto = producto(txt);
+    const lista = filtrarProductos(txt);
+    const p = exacto || (lista.length === 1 ? lista[0] : null);
+    if (p) { agregarProd(p.codigo); $('buscar').value = ''; pintarProductos(); }
+    else toast(lista.length ? 'Hay varios resultados: elige uno de la lista.' : 'No encontré ese producto.', 'err');
+  });
+  $('listaProd').addEventListener('click', e => { const b = e.target.closest('.prod'); if (b && !b.disabled) agregarProd(b.dataset.codigo); });
+  $('dgTipo').addEventListener('change', () => { S.carrito.dgTipo = $('dgTipo').value; pintarTotales(); guardarCarrito(); });
+  $('dgValor').addEventListener('input', () => { S.carrito.dgValor = $('dgValor').value; pintarCarrito(); guardarCarrito(); });
+  $('dgMotivo').addEventListener('change', () => {
+    S.carrito.motivo = $('dgMotivo').value;
+    $('dgOtro').classList.toggle('oculto', S.carrito.motivo.toLowerCase() !== 'otro');
+    if (S.carrito.motivo.toLowerCase() === 'otro') $('dgOtro').focus();
+    guardarCarrito();
+  });
+  $('dgOtro').addEventListener('input', () => { S.carrito.motivoOtro = $('dgOtro').value; guardarCarrito(); });
+  $('dgOtro').classList.toggle('oculto', car.motivo.toLowerCase() !== 'otro');
+
+  pintarAvisoCaja(); pintarProductos(); pintarCarrito();
+  $('buscar').focus();
+}
+
+function pintarAvisoCaja() {
+  const a = $('avisoCaja'); if (!a) return;
+  if (!S.caja.abierta) a.innerHTML = `<div class="aviso-caja">La caja está cerrada. Ábrela para poder cobrar.<button class="btn pri" onclick="irA('caja')">Abrir caja</button></div>`;
+  else if (S.ajustes.tasaFecha !== hoyISO()) a.innerHTML = `<div class="aviso-caja">La tasa no es de hoy (${bs(S.ajustes.tasa)}).<button class="btn pri" onclick="modalTasa()">Actualizar tasa</button></div>`;
+  else a.innerHTML = '';
+}
+
+function filtrarProductos(txt) {
+  const palabras = String(txt || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!palabras.length) return catalogo();
+  return catalogo().filter(p => {
+    const texto = (p.nombre + ' ' + p.codigo + ' ' + (p.categoria || '')).toLowerCase();
+    return palabras.every(w => texto.includes(w));
+  });
+}
+
+function pintarProductos() {
+  const cont = $('listaProd'); if (!cont) return;
+  const lista = filtrarProductos($('buscar') ? $('buscar').value : '').slice(0, 80);
+  const tasa = S.ajustes.tasa;
+  if (!catalogo().length) { cont.innerHTML = `<div class="vacio" style="grid-column:1/-1">Todavía no hay productos. Créalos en <b>Productos</b> o sincroniza con tu hoja.</div>`; return; }
+  if (!lista.length) { cont.innerHTML = `<div class="vacio" style="grid-column:1/-1">Sin resultados</div>`; return; }
+  cont.innerHTML = lista.map(p => {
+    const enCarrito = (S.carrito.items.find(i => i.codigo === p.codigo) || {}).cantidad || 0;
+    const disp = r3(p.stock - enCarrito);
+    return `<button class="prod" data-codigo="${esc(p.codigo)}" ${disp <= 0 ? 'disabled' : ''}>
+      <span class="p-nom">${esc(p.nombre)}</span>
+      <span class="p-meta">${esc(p.codigo)} · <span class="${p.stock <= (p.minimo || 0) ? 'bajo' : ''}">Stock ${cant(disp)}</span></span>
+      <span class="p-precio">${usd(p.precio)}${tasa > 0 ? `<small>${bs(p.precio * tasa)}</small>` : ''}</span>
+    </button>`;
+  }).join('');
+}
+
+function agregarProd(codigo, q) {
+  const p = producto(codigo); if (!p) return;
+  q = q || 1;
+  const it = S.carrito.items.find(i => i.codigo === p.codigo);
+  const nueva = r3((it ? it.cantidad : 0) + q);
+  if (nueva > p.stock) return toast('Stock insuficiente de ' + p.nombre + ' (hay ' + cant(p.stock) + ')', 'err');
+  if (it) it.cantidad = nueva;
+  else S.carrito.items.push({ codigo: p.codigo, nombre: p.nombre, precio: p.precio, cantidad: q, desc: 0 });
+  pintarCarrito(); pintarProductos(); guardarCarrito();
+}
+function cambiarCant(k, delta) { const it = S.carrito.items[k]; if (it) fijarCant(k, r3(it.cantidad + delta)); }
+function fijarCant(k, valor) {
+  const it = S.carrito.items[k]; if (!it) return;
+  const q = num(valor);
+  if (!(q > 0)) { S.carrito.items.splice(k, 1); }
+  else {
+    const p = producto(it.codigo);
+    if (p && q > p.stock) toast('Stock insuficiente (hay ' + cant(p.stock) + ')', 'err');
+    else it.cantidad = r3(q);
+  }
+  pintarCarrito(); pintarProductos(); guardarCarrito();
+}
+function fijarDesc(k, valor) {
+  const it = S.carrito.items[k]; if (!it) return;
+  let d = num(valor); if (!(d > 0)) d = 0;
+  const tope = cfg().descMax;
+  if (d > tope) { toast('El descuento por producto no puede pasar de ' + tope + '%', 'err'); d = tope; }
+  it.desc = d; pintarCarrito(); guardarCarrito();
+}
+function quitarItem(k) { S.carrito.items.splice(k, 1); pintarCarrito(); pintarProductos(); guardarCarrito(); }
+function vaciarCarrito() {
+  if (S.carrito.items.length && !confirm('¿Vaciar la venta actual?')) return;
+  S.carrito = nuevoCarrito(); guardarCarrito(); vistaVender();
+}
+
+function calcular() {
+  const car = S.carrito, tope = cfg().descMax;
+  const lineas = car.items.map(i => {
+    const bruto = r2(i.precio * i.cantidad);
+    return Object.assign({}, i, { bruto, neto1: r2(bruto - bruto * (i.desc || 0) / 100) });
+  });
+  const bruto = r2(lineas.reduce((s, l) => s + l.bruto, 0));
+  const sub = r2(lineas.reduce((s, l) => s + l.neto1, 0));
+  let v = num(car.dgValor); if (!(v > 0)) v = 0;
+  let g = car.dgTipo === '%' ? r2(sub * v / 100) : r2(v);
+  if (g > sub) g = sub;
+  const total = r2(sub - g);
+  let asignado = 0;
+  lineas.forEach((l, k) => {
+    const parte = k === lineas.length - 1 ? r2(g - asignado) : (sub > 0 ? r2(g * l.neto1 / sub) : 0);
+    asignado = r2(asignado + parte);
+    l.neto = Math.max(0, r2(l.neto1 - parte));
+    l.desc = r2(l.bruto - l.neto);
+  });
+  const desc = r2(bruto - total);
+  return { lineas, bruto, total, desc, excede: bruto > 0 && desc / bruto * 100 > tope + 0.001, tope };
+}
+function motivoDescuento() {
+  const c = S.carrito;
+  return String(c.motivo).toLowerCase() === 'otro' ? String(c.motivoOtro || '').trim() : String(c.motivo || '').trim();
+}
+
+function pintarCarrito() {
+  const cont = $('carrito'); if (!cont) return;
+  const c = calcular();
+  cont.innerHTML = c.lineas.length ? c.lineas.map((l, k) => `
+    <div class="item">
+      <div class="item-nom">${esc(l.nombre)}<small>${usd(l.precio)} c/u</small></div>
+      <div class="qty">
+        <button onclick="cambiarCant(${k},-1)" aria-label="Menos">−</button>
+        <input value="${cant(l.cantidad)}" inputmode="decimal" onchange="fijarCant(${k},this.value)" aria-label="Cantidad">
+        <button onclick="cambiarCant(${k},1)" aria-label="Más">+</button>
+      </div>
+      <div class="pct"><input value="${S.carrito.items[k].desc || ''}" inputmode="decimal" placeholder="0" onchange="fijarDesc(${k},this.value)" aria-label="Descuento %">%</div>
+      <div class="item-sub">${usd(l.neto)}</div>
+      <button class="x" onclick="quitarItem(${k})" aria-label="Quitar">✕</button>
+    </div>`).join('') : `<div class="vacio">Busca un producto o escanea su código para empezar.</div>`;
+  pintarTotales(c);
+}
+
+function pintarTotales(c) {
+  c = c || calcular();
+  const tasa = S.ajustes.tasa;
+  $('totales').innerHTML = `
+    ${c.desc > 0 ? `<div class="linea"><span>Precio de lista</span><span class="num">${usd(c.bruto)}</span></div>
+    <div class="linea"><span>Descuentos</span><span class="num" style="color:${c.excede ? 'var(--err)' : 'inherit'}">− ${usd(c.desc)}${c.excede ? ' (máx. ' + c.tope + '%)' : ''}</span></div>` : ''}
+    <div class="total-usd">${usd(c.total)}</div>
+    <div class="total-bs">${tasa > 0 ? bs(c.total * tasa) : 'Define la tasa para ver el total en Bs'}</div>`;
+  $('motivoBox').classList.toggle('oculto', !(c.desc > 0));
+  $('btnCobrar').disabled = !c.lineas.length;
+}
+
+/* ---------- Cobro ---------- */
+function abrirCobro() {
+  const c = calcular();
+  if (!c.lineas.length) return;
+  if (!S.caja.abierta) { toast('Abre la caja antes de cobrar.', 'err'); return irA('caja'); }
+  if (!(S.ajustes.tasa > 0)) { toast('Define la tasa del día.', 'err'); return modalTasa(); }
+  if (c.excede) return toast('El descuento supera el máximo permitido (' + c.tope + '%).', 'err');
+  if (c.desc > 0 && !motivoDescuento()) { toast('Indica el motivo del descuento.', 'err'); $('dgMotivo').focus(); return; }
+
+  const mets = cfg().metodos;
+  S.cobro = { total: c.total, pagos: [], vuelto: (mets.find(m => m.efectivo && m.moneda === 'VES') || mets.find(m => m.efectivo) || mets[0]).nombre };
+  abrirModal(`
+    <div class="modal-cab"><h2>Cobrar</h2><button class="x" onclick="cerrarModal()" aria-label="Cerrar">✕</button></div>
+    <div class="cobro-total"><div class="usd">${usd(c.total)}</div><div class="bs">${bs(c.total * S.ajustes.tasa)} · tasa ${fmt(S.ajustes.tasa)}</div></div>
+    <label>Pagar lo que falta con</label>
+    <div class="chips">${mets.map((m, i) => `<button class="chip" onclick="pagoResto(${i})">${esc(m.nombre)}${sufijoMoneda(m) ? `<small>${sufijoMoneda(m)}</small>` : ''}</button>`).join('')}</div>
+    <label for="pMetodo">O registra un monto recibido</label>
+    <div class="pago-manual">
+      <select id="pMetodo">${mets.map((m, i) => `<option value="${i}">${esc(m.nombre)}${sufijoMoneda(m) ? ' (' + sufijoMoneda(m) + ')' : ''}</option>`).join('')}</select>
+      <input id="pMonto" inputmode="decimal" placeholder="Monto">
+      <button class="btn" onclick="agregarPago()">Agregar</button>
+    </div>
+    <div id="pagosLista" class="pagos"></div>
+    <div id="cobroEstado"></div>
+    <div class="acciones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn ok" id="btnConfirmar" onclick="confirmarVenta()">Confirmar venta</button></div>`);
+  $('pMonto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); agregarPago(); } });
+  pintarCobro();
+}
+
+// Muestra "$" o "Bs" junto al método solo si su nombre no lo dice ya
+function sufijoMoneda(m) {
+  const s = m.moneda === 'USD' ? '$' : 'Bs';
+  return /\$|\bbs\b|bol[ií]var|usd|d[oó]lar|zelle/i.test(m.nombre) ? '' : s;
+}
+
+function estadoCobro() {
+  const tasa = S.ajustes.tasa;
+  const pagado = S.cobro.pagos.reduce((s, p) => s + p.usd, 0);
+  const falta = r4(S.cobro.total - pagado);
+  const tol = Math.max(0.0001, 0.005 / tasa);
+  return { falta, tol, listo: falta <= tol, vuelto: falta < -tol ? r4(-falta) : 0 };
+}
+
+function pintarCobro() {
+  const tasa = S.ajustes.tasa, e = estadoCobro();
+  $('pagosLista').innerHTML = S.cobro.pagos.map((p, k) => `
+    <div class="pago"><span>${esc(p.metodo)}</span>
+      <span style="display:flex;gap:8px;align-items:center"><span class="m">${enMoneda(p.monto, p.moneda)}${p.moneda === 'VES' ? `<small>≈ ${usd(p.usd)}</small>` : ''}</span>
+      <button class="x" onclick="quitarPago(${k})" aria-label="Quitar pago">✕</button></span></div>`).join('');
+  const est = $('cobroEstado');
+  if (!e.listo) {
+    est.className = 'cobro-estado falta';
+    est.innerHTML = `Falta ${usd(e.falta)}<small>${bs(e.falta * tasa)}</small>`;
+  } else if (e.vuelto > 0) {
+    const m = metodo(S.cobro.vuelto) || cfg().metodos[0];
+    const montoV = m.moneda === 'USD' ? r2(e.vuelto) : r2(e.vuelto * tasa);
+    let aviso = '';
+    if (m.efectivo) {
+      const r = resumenTurno();
+      const enVenta = S.cobro.pagos.filter(p => p.efectivo && p.moneda === m.moneda).reduce((s, p) => s + p.monto, 0);
+      const hay = r2((m.moneda === 'USD' ? r.espUSD : r.espVES) + enVenta);
+      if (montoV > hay + 0.001) aviso = `<small style="color:var(--err)">⚠ En la gaveta solo hay ${enMoneda(hay, m.moneda)}. Elige otro método para el vuelto.</small>`;
+    }
+    est.className = 'cobro-estado vuelto';
+    est.innerHTML = `Vuelto: ${enMoneda(montoV, m.moneda)}<small>${m.moneda === 'USD' ? bs(e.vuelto * tasa) : usd(e.vuelto)}</small>${aviso}
+      <select id="vueltoMetodo" aria-label="Dar vuelto en">${cfg().metodos.map(x => `<option ${x.nombre === m.nombre ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select>`;
+    $('vueltoMetodo').addEventListener('change', ev => { S.cobro.vuelto = ev.target.value; pintarCobro(); });
+  } else {
+    est.className = 'cobro-estado listo';
+    est.textContent = '✓ Pago completo';
+  }
+  $('btnConfirmar').disabled = !e.listo;
+}
+
+function nuevoPago(m, monto) {
+  const tasa = S.ajustes.tasa;
+  return { tipo: 'Pago', metodo: m.nombre, moneda: m.moneda, efectivo: !!m.efectivo, monto: r2(monto), usd: r4(m.moneda === 'USD' ? monto : monto / tasa) };
+}
+function pagoResto(i) {
+  const m = cfg().metodos[i], e = estadoCobro();
+  if (e.listo) return toast('El pago ya está completo.');
+  const monto = m.moneda === 'USD' ? Math.ceil(e.falta * 100 - 1e-6) / 100 : Math.ceil(e.falta * S.ajustes.tasa * 100 - 1e-6) / 100;
+  S.cobro.pagos.push(nuevoPago(m, monto)); pintarCobro();
+}
+function agregarPago() {
+  const m = cfg().metodos[Number($('pMetodo').value)], monto = num($('pMonto').value);
+  if (!(monto > 0)) { toast('Escribe el monto recibido.', 'err'); return $('pMonto').focus(); }
+  S.cobro.pagos.push(nuevoPago(m, monto));
+  $('pMonto').value = ''; pintarCobro(); $('pMonto').focus();
+}
+function quitarPago(k) { S.cobro.pagos.splice(k, 1); pintarCobro(); }
+
+async function confirmarVenta() {
+  const e = estadoCobro();
+  if (!e.listo) return;
+  const c = calcular(), tasa = S.ajustes.tasa, motivo = c.desc > 0 ? motivoDescuento() : '';
+  const pagos = S.cobro.pagos.map(p => Object.assign({}, p));
+  let textoVuelto = '';
+  if (e.vuelto > 0) {
+    const m = metodo(S.cobro.vuelto) || cfg().metodos[0];
+    const montoV = m.moneda === 'USD' ? r2(e.vuelto) : r2(e.vuelto * tasa);
+    pagos.push({ tipo: 'Vuelto', metodo: m.nombre, moneda: m.moneda, efectivo: !!m.efectivo, monto: -montoV, usd: -r4(e.vuelto) });
+    textoVuelto = ' · Vuelto ' + enMoneda(montoV, m.moneda);
+  }
+  $('btnConfirmar').disabled = true;
+  let id = '';
+  const ok = await cambio(() => {
+    S.contadores.V = (S.contadores.V || 0) + 1;
+    id = 'V-' + S.ajustes.dispositivo + '-' + String(S.contadores.V).padStart(6, '0');
+    const fecha = new Date().toISOString();
+    const datos = {
+      id, fecha, turno: S.caja.turno, cajero: S.caja.cajero, tasa, motivo,
+      items: c.lineas.map(l => ({ codigo: l.codigo, nombre: l.nombre, cantidad: l.cantidad, precio: l.precio, neto: l.neto, desc: l.desc })),
+      pagos, totalUSD: c.total, descUSD: c.desc
+    };
+    S.caja.ventas.push({ id, fecha, total: c.total, desc: c.desc, n: c.lineas.length, pagos });
+    S.carrito = nuevoCarrito();
+    return op('venta', datos);
+  });
+  if (!ok) { $('btnConfirmar').disabled = false; return; }
+  cerrarModal();
+  toast('✅ Venta ' + id + ' guardada' + textoVuelto);
+  vistaVender();
+}
+
+/* ================================================================
+   CAJA
+   ================================================================ */
+function resumenTurno() {
+  const k = S.caja, porMetodo = {};
+  let total = 0, desc = 0, efUSD = 0, efVES = 0;
+  (k.ventas || []).forEach(v => {
+    total += v.total; desc += v.desc || 0;
+    v.pagos.forEach(p => {
+      const key = p.metodo + '|' + p.moneda;
+      if (!porMetodo[key]) porMetodo[key] = { metodo: p.metodo, moneda: p.moneda, monto: 0, usd: 0 };
+      porMetodo[key].monto += p.monto; porMetodo[key].usd += p.usd;
+      if (p.efectivo) { if (p.moneda === 'USD') efUSD += p.monto; else efVES += p.monto; }
+    });
+  });
+  const retUSD = (k.retiros || []).filter(r => r.moneda === 'USD').reduce((s, r) => s + r.monto, 0);
+  const retVES = (k.retiros || []).filter(r => r.moneda === 'VES').reduce((s, r) => s + r.monto, 0);
+  return {
+    total: r2(total), desc: r2(desc), n: (k.ventas || []).length,
+    porMetodo: Object.values(porMetodo).map(m => Object.assign(m, { monto: r2(m.monto), usd: r2(m.usd) })).sort((a, b) => b.usd - a.usd),
+    efUSD: r2(efUSD), efVES: r2(efVES), retUSD: r2(retUSD), retVES: r2(retVES),
+    espUSD: r2((k.fondoUSD || 0) + efUSD - retUSD), espVES: r2((k.fondoVES || 0) + efVES - retVES)
+  };
+}
+
+function vistaCaja() {
+  if (!S.caja.abierta) {
+    const u = S.caja.ultimo;
+    $('vista').innerHTML = `
+    <section class="panel estrecho">
+      <h2>Abrir caja</h2>
+      ${u ? `<div class="info">Último cierre: ${fechaTxt(u.fecha)} · ${esc(u.cajero)}<br>
+        Diferencia: <b>${difTxt(u.difUSD, 'USD')}</b> · <b>${difTxt(u.difVES, 'VES')}</b></div>` : ''}
+      <label for="aCajero">Cajero</label><input id="aCajero" value="${esc(S.ajustes.ultimoCajero || '')}" placeholder="Nombre de quien atiende">
+      <label for="aTasa">Tasa del día (Bs por $)</label><input id="aTasa" inputmode="decimal" value="${S.ajustes.tasaFecha === hoyISO() && S.ajustes.tasa ? fmt(S.ajustes.tasa) : ''}" placeholder="Ej.: 857,01">
+      <div class="fila">
+        <div><label for="aUSD">Fondo en $</label><input id="aUSD" inputmode="decimal" value="0"></div>
+        <div><label for="aVES">Fondo en Bs</label><input id="aVES" inputmode="decimal" value="0"></div>
+      </div>
+      <button class="btn pri grande" onclick="abrirCaja()">Abrir caja</button>
+    </section>`;
+    return $('aCajero').focus();
+  }
+  $('vista').innerHTML = `
+  <div class="caja-grid">
+    <section class="panel" id="cajaResumen"></section>
+    <section class="panel">
+      <h2>Retiro o gasto</h2>
+      <div class="fila">
+        <select id="rMoneda" style="flex:0 0 90px" aria-label="Moneda"><option value="USD">$</option><option value="VES">Bs</option></select>
+        <input id="rMonto" inputmode="decimal" placeholder="Monto" aria-label="Monto">
+      </div>
+      <input id="rConcepto" placeholder="Concepto (ej.: pago a proveedor)" style="margin-top:8px" aria-label="Concepto">
+      <button class="btn" style="margin-top:10px;width:100%" onclick="registrarRetiro()">Registrar retiro</button>
+      <div id="retirosLista" style="margin-top:10px"></div>
+    </section>
+    <section class="panel">
+      <h2>Cerrar caja</h2>
+      <p class="suave" style="margin:0">Cuenta el efectivo de la gaveta y escríbelo aquí.</p>
+      <div class="fila">
+        <div><label for="cUSD">Efectivo contado $</label><input id="cUSD" inputmode="decimal"></div>
+        <div><label for="cVES">Efectivo contado Bs</label><input id="cVES" inputmode="decimal"></div>
+      </div>
+      <div id="cDif"></div>
+      <label for="cNotas">Notas (opcional)</label><textarea id="cNotas" rows="2"></textarea>
+      <button class="btn pri grande" onclick="cerrarCaja()">Cerrar caja</button>
+    </section>
+    <section class="panel ancho"><h2>Ventas de este turno</h2><div id="ventasTurno" class="tabla-wrap"></div></section>
+  </div>`;
+  $('cUSD').addEventListener('input', pintarDiferencia);
+  $('cVES').addEventListener('input', pintarDiferencia);
+  pintarCaja();
+}
+
+function difTxt(d, moneda) {
+  if (Math.abs(d) < 0.005) return 'cuadra';
+  return (d > 0 ? 'sobran ' : 'faltan ') + enMoneda(Math.abs(d), moneda);
+}
+
+function pintarCaja() {
+  const k = S.caja, r = resumenTurno();
+  $('cajaResumen').innerHTML = `
+    <h2>Turno ${esc(k.turno)}</h2>
+    <p class="suave" style="margin:0">${esc(k.cajero)} · abierta ${fechaTxt(k.apertura)} · tasa ${bs(k.tasa)}</p>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${usd(r.total)}</div><div class="l">Vendido (${r.n} venta${r.n === 1 ? '' : 's'})</div></div>
+      <div class="kpi"><div class="v">${usd(r.desc)}</div><div class="l">Descuentos</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Cobros por método</th><th class="n">Monto</th></tr></thead>
+      <tbody>${r.porMetodo.length ? r.porMetodo.map(m => `<tr><td>${esc(m.metodo)}</td><td class="n">${enMoneda(m.monto, m.moneda)}</td></tr>`).join('') : '<tr><td colspan="2" class="suave">Sin cobros todavía</td></tr>'}</tbody>
+    </table>
+    <table style="margin-top:12px">
+      <thead><tr><th>Efectivo en gaveta</th><th class="n">$</th><th class="n">Bs</th></tr></thead>
+      <tbody>
+        <tr><td>Fondo inicial</td><td class="n">${fmt(k.fondoUSD)}</td><td class="n">${fmt(k.fondoVES)}</td></tr>
+        <tr><td>+ Cobros en efectivo (neto de vueltos)</td><td class="n">${fmt(r.efUSD)}</td><td class="n">${fmt(r.efVES)}</td></tr>
+        <tr><td>− Retiros</td><td class="n">${fmt(r.retUSD)}</td><td class="n">${fmt(r.retVES)}</td></tr>
+        <tr class="fuerte"><td>Debería haber</td><td class="n">${fmt(r.espUSD)}</td><td class="n">${fmt(r.espVES)}</td></tr>
+      </tbody>
+    </table>`;
+  $('retirosLista').innerHTML = (k.retiros || []).length ? `<table><tbody>${k.retiros.slice().reverse().map(x => `<tr><td>${horaTxt(x.fecha)} · ${esc(x.concepto)}</td><td class="n">${enMoneda(x.monto, x.moneda)}</td></tr>`).join('')}</tbody></table>` : '<p class="suave">Sin retiros en este turno.</p>';
+  $('ventasTurno').innerHTML = (k.ventas || []).length ? `<table>
+    <thead><tr><th>Hora</th><th>Venta</th><th>Pagos</th><th class="n">Descuento</th><th class="n">Total</th></tr></thead>
+    <tbody>${k.ventas.slice().reverse().map(v => `<tr><td>${horaTxt(v.fecha)}</td><td>${esc(v.id)}</td>
+      <td class="suave">${v.pagos.map(p => (p.tipo === 'Vuelto' ? 'Vuelto ' : '') + esc(p.metodo) + ' ' + enMoneda(Math.abs(p.monto), p.moneda)).join(' · ')}</td>
+      <td class="n">${v.desc > 0 ? usd(v.desc) : ''}</td><td class="n">${usd(v.total)}</td></tr>`).join('')}</tbody></table>` : '<p class="suave">Aún no hay ventas.</p>';
+  pintarDiferencia();
+}
+
+function pintarDiferencia() {
+  const el = $('cDif'); if (!el) return;
+  const r = resumenTurno(), cu = num($('cUSD').value), cv = num($('cVES').value);
+  const linea = (c, esp, moneda) => {
+    if (isNaN(c)) return '';
+    const d = r2(c - esp), cls = Math.abs(d) < 0.005 ? 'bien' : d < 0 ? 'mal' : 'sobra';
+    return `<div class="dif ${cls}">${moneda === 'USD' ? '$' : 'Bs'}: ${Math.abs(d) < 0.005 ? '✓ cuadra' : (d < 0 ? 'faltan ' : 'sobran ') + enMoneda(Math.abs(d), moneda)}</div>`;
+  };
+  el.innerHTML = linea(cu, r.espUSD, 'USD') + linea(cv, r.espVES, 'VES');
+}
+
+async function abrirCaja() {
+  const cajero = $('aCajero').value.trim(), tasa = num($('aTasa').value);
+  const fUSD = num($('aUSD').value || 0), fVES = num($('aVES').value || 0);
+  if (!cajero) return toast('Escribe el nombre del cajero.', 'err');
+  if (!(tasa > 0)) return toast('Escribe la tasa del día.', 'err');
+  if (isNaN(fUSD) || isNaN(fVES) || fUSD < 0 || fVES < 0) return toast('Revisa los montos del fondo.', 'err');
+  const ok = await cambio(() => {
+    S.contadores.T = (S.contadores.T || 0) + 1;
+    const turno = 'T-' + S.ajustes.dispositivo + '-' + String(S.contadores.T).padStart(4, '0');
+    const fecha = new Date().toISOString();
+    S.caja = { abierta: true, turno, apertura: fecha, cajero, tasa, fondoUSD: r2(fUSD), fondoVES: r2(fVES), ventas: [], retiros: [], ultimo: S.caja.ultimo || null };
+    Object.assign(S.ajustes, { tasa, tasaFecha: hoyISO(), ultimoCajero: cajero });
+    return op('abrirCaja', { turno, fecha, cajero, tasa, fondoUSD: r2(fUSD), fondoVES: r2(fVES) });
+  });
+  if (!ok) return;
+  toast('✅ Caja abierta');
+  pintarEstado(); irA('vender');
+}
+
+async function registrarRetiro() {
+  const moneda = $('rMoneda').value, monto = num($('rMonto').value), concepto = $('rConcepto').value.trim();
+  if (!(monto > 0)) return toast('Escribe el monto del retiro.', 'err');
+  if (!concepto) return toast('Escribe el concepto.', 'err');
+  const r = resumenTurno(), disp = moneda === 'USD' ? r.espUSD : r.espVES;
+  if (monto > disp + 0.001) return toast('No hay suficiente efectivo (' + enMoneda(disp, moneda) + ' disponibles).', 'err');
+  const ok = await cambio(() => {
+    const fecha = new Date().toISOString();
+    S.caja.retiros.push({ fecha, moneda, monto: r2(monto), concepto });
+    return op('retiro', { fecha, turno: S.caja.turno, moneda, monto: r2(monto), concepto });
+  });
+  if (!ok) return;
+  $('rMonto').value = ''; $('rConcepto').value = '';
+  toast('✅ Retiro registrado'); pintarCaja();
+}
+
+async function cerrarCaja() {
+  const cu = num($('cUSD').value), cv = num($('cVES').value);
+  if (isNaN(cu) || isNaN(cv) || cu < 0 || cv < 0) return toast('Escribe el efectivo contado en $ y en Bs (0 si no hay).', 'err');
+  const r = resumenTurno();
+  if (!confirm('¿Cerrar la caja ' + S.caja.turno + '?\n\n$: ' + difTxt(r2(cu - r.espUSD), 'USD') + '\nBs: ' + difTxt(r2(cv - r.espVES), 'VES'))) return;
+  const ok = await cambio(() => {
+    const k = S.caja, fecha = new Date().toISOString();
+    const detalle = r.porMetodo.map(m => m.metodo + ': ' + (m.moneda === 'USD' ? '$' : 'Bs') + ' ' + fmt(m.monto)).join(' | ');
+    const datos = {
+      turno: k.turno, fecha, apertura: k.apertura, cajero: k.cajero, tasa: k.tasa, fondoUSD: k.fondoUSD, fondoVES: k.fondoVES,
+      ventasUSD: r.total, detalle, retirosUSD: r.retUSD, retirosVES: r.retVES, esperadoUSD: r.espUSD, esperadoVES: r.espVES,
+      contadoUSD: r2(cu), contadoVES: r2(cv), notas: $('cNotas').value.trim()
+    };
+    S.caja = { abierta: false, ultimo: { fecha, cajero: k.cajero, turno: k.turno, difUSD: r2(cu - r.espUSD), difVES: r2(cv - r.espVES) } };
+    return op('cerrarCaja', datos);
+  });
+  if (!ok) return;
+  toast('🔒 Caja cerrada');
+  pintarEstado(); vistaCaja();
+}
+
+/* ================================================================
+   INVENTARIO
+   ================================================================ */
+function vistaInventario() {
+  $('vista').innerHTML = `
+  <div class="dos">
+    <section class="panel">
+      <div class="seg">
+        <button id="segCarga" onclick="tipoInv('Carga')">Entrada (carga)</button>
+        <button id="segDescarga" onclick="tipoInv('Descarga')">Salida (descarga)</button>
+      </div>
+      <label for="iProd">Producto</label>
+      <input id="iProd" list="dlProd" placeholder="Código o nombre" autocomplete="off"><datalist id="dlProd"></datalist>
+      <div id="iInfo" class="info oculto"></div>
+      <div class="fila">
+        <div><label for="iCant">Cantidad</label><input id="iCant" inputmode="decimal" value="1"></div>
+        <div><label for="iMotivo">Motivo</label><select id="iMotivo"></select></div>
+      </div>
+      <div id="iCostoBox">
+        <label for="iCosto">Nuevo costo unitario $ (opcional)</label>
+        <input id="iCosto" inputmode="decimal" placeholder="Déjalo vacío si no cambió">
+        <div id="iSug" class="sug oculto"></div>
+      </div>
+      <label for="iNota">Nota o n.º de factura (opcional)</label><input id="iNota">
+      <button class="btn pri grande" id="iBtn" onclick="registrarMov()">Registrar</button>
+    </section>
+    <section class="panel"><h2>Registrados en esta sesión</h2><div id="invHist"></div></section>
+  </div>`;
+  $('dlProd').innerHTML = catalogo().map(p => `<option value="${esc(p.codigo + ' — ' + p.nombre)}">`).join('');
+  $('iProd').addEventListener('input', infoInv);
+  $('iCosto').addEventListener('input', sugInv);
+  tipoInv(S.invTipo);
+  pintarInvHist();
+  $('iProd').focus();
+}
+function prodDeTexto(txt) {
+  txt = String(txt || '').trim(); if (!txt) return null;
+  const p = producto(txt.split(' — ')[0].trim());
+  if (p) return p;
+  const lista = filtrarProductos(txt);
+  return lista.length === 1 ? lista[0] : null;
+}
+function tipoInv(t) {
+  S.invTipo = t;
+  $('segCarga').classList.toggle('activo', t === 'Carga');
+  $('segDescarga').classList.toggle('activo', t === 'Descarga');
+  const mot = t === 'Carga' ? cfg().motivosCarga : cfg().motivosDescarga;
+  $('iMotivo').innerHTML = mot.map(m => `<option>${esc(m)}</option>`).join('');
+  $('iCostoBox').classList.toggle('oculto', t !== 'Carga');
+  $('iBtn').textContent = t === 'Carga' ? 'Registrar entrada' : 'Registrar salida';
+  infoInv();
+}
+function infoInv() {
+  if (!$('iInfo')) return;
+  const p = prodDeTexto($('iProd').value);
+  $('iInfo').classList.toggle('oculto', !p);
+  if (p) $('iInfo').innerHTML = `<b>${esc(p.nombre)}</b> · Stock ${cant(p.stock)} · Costo ${usd(p.costo)} · Precio ${usd(p.precio)}`;
+  sugInv();
+}
+function sugInv() {
+  const box = $('iSug'); if (!box) return;
+  const p = prodDeTexto($('iProd').value), c = num($('iCosto').value);
+  const s = p && S.invTipo === 'Carga' ? sugerido(c, p.categoria) : null;
+  box.classList.toggle('oculto', !s);
+  if (!s) return;
+  box.innerHTML = `Con este costo, el precio sugerido es <b>${usd(s.precio)}</b> <span class="suave">(${s.ganancia}% de ganancia + ${cfg().precios.colchon}% de colchón)</span><br>
+    Hoy lo vendes a ${usd(p.precio)}${p.precio < s.precio ? ' <b style="color:var(--aviso)">(por debajo)</b>' : ''}
+    <label class="check"><input type="checkbox" id="iActPrecio" ${p.precio < s.precio ? 'checked' : ''}> Cambiar el precio de venta a ${usd(s.precio)}</label>`;
+}
+async function registrarMov() {
+  const p = prodDeTexto($('iProd').value), q = num($('iCant').value), tipo = S.invTipo;
+  if (!p) return toast('Elige un producto de la lista.', 'err');
+  if (!(q > 0)) return toast('La cantidad debe ser mayor que cero.', 'err');
+  if (tipo === 'Descarga' && q > p.stock) return toast('No puedes sacar más de lo que hay (' + cant(p.stock) + ').', 'err');
+  const costoTxt = tipo === 'Carga' ? $('iCosto').value.trim() : '';
+  const costo = costoTxt ? num(costoTxt) : null;
+  if (costoTxt && !(costo >= 0)) return toast('Revisa el costo.', 'err');
+  const s = costo != null ? sugerido(costo, p.categoria) : null;
+  const precio = s && $('iActPrecio') && $('iActPrecio').checked ? s.precio : null;
+  const motivo = $('iMotivo').value, nota = $('iNota').value.trim();
+  const ok = await cambio(() => op('movimiento', {
+    fecha: new Date().toISOString(), tipo, codigo: p.codigo, cantidad: r3(q), motivo, nota, costo, precio, usuario: S.caja.cajero || ''
+  }));
+  if (!ok) return;
+  S.invHist.unshift({ nombre: p.nombre, tipo, q: r3(q), motivo, stock: producto(p.codigo).stock, precioAntes: p.precio, precio });
+  $('iProd').value = ''; $('iCant').value = '1'; $('iCosto').value = ''; $('iNota').value = '';
+  $('dlProd').innerHTML = catalogo().map(x => `<option value="${esc(x.codigo + ' — ' + x.nombre)}">`).join('');
+  infoInv(); pintarInvHist(); toast('✅ Movimiento registrado'); $('iProd').focus();
+}
+function pintarInvHist() {
+  $('invHist').innerHTML = S.invHist.length ? `<table><thead><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Stock nuevo</th></tr></thead><tbody>
+    ${S.invHist.map(h => `<tr><td>${esc(h.nombre)} <span class="suave">(${esc(h.motivo)})</span>${h.precio != null ? `<br><small class="bajo-sug">Precio ${usd(h.precioAntes)} → ${usd(h.precio)}</small>` : ''}</td>
+    <td class="n">${h.tipo === 'Carga' ? '+' : '−'}${cant(h.q)}</td><td class="n">${cant(h.stock)}</td></tr>`).join('')}</tbody></table>`
+    : '<p class="suave">Aún no registras movimientos.</p>';
+}
+
+/* ================================================================
+   PRODUCTOS
+   ================================================================ */
+function vistaProductos() {
+  $('vista').innerHTML = `
+  <section class="panel">
+    <div class="toolbar">
+      <input id="pBuscar" placeholder="Buscar por nombre, código o categoría" aria-label="Buscar">
+      <button class="btn pri" onclick="formProducto()">Nuevo producto</button>
+      <button class="btn" onclick="subirSugeridos()">Subir precios al sugerido</button>
+    </div>
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th class="n">Costo $</th><th class="n">Precio $</th><th class="n">Precio Bs</th><th class="n">Sugerido $</th><th class="n">Stock</th></tr></thead>
+      <tbody id="tProd"></tbody>
+    </table></div>
+  </section>`;
+  $('pBuscar').addEventListener('input', pintarTablaProductos);
+  $('tProd').addEventListener('click', e => { const tr = e.target.closest('tr[data-codigo]'); if (tr) formProducto(tr.dataset.codigo); });
+  pintarTablaProductos();
+  $('pBuscar').focus();
+}
+function pintarTablaProductos() {
+  const t = $('tProd'); if (!t) return;
+  const lista = filtrarProductos($('pBuscar').value), tasa = S.ajustes.tasa;
+  t.innerHTML = lista.length ? lista.map(p => {
+    const s = sugerido(p.costo, p.categoria);
+    return `<tr class="clic" data-codigo="${esc(p.codigo)}" title="Editar">
+      <td>${esc(p.codigo)}</td><td>${esc(p.nombre)}</td><td class="suave">${esc(p.categoria || '')}</td>
+      <td class="n">${fmt(p.costo)}</td><td class="n ${s && p.precio < s.precio ? 'bajo-sug' : ''}">${fmt(p.precio)}</td>
+      <td class="n suave">${tasa > 0 ? fmt(p.precio * tasa) : ''}</td><td class="n suave">${s ? fmt(s.precio) : ''}</td>
+      <td class="n ${p.stock <= (p.minimo || 0) ? 'stock-bajo' : ''}">${cant(p.stock)}</td></tr>`;
+  }).join('') : `<tr><td colspan="8" class="vacio">${catalogo().length ? 'Sin resultados' : 'Aún no hay productos. Crea el primero con “Nuevo producto”.'}</td></tr>`;
+}
+
+function formProducto(codigo) {
+  const p = codigo ? producto(codigo) : null;
+  const cats = Array.from(new Set(catalogo().map(x => x.categoria).filter(Boolean)));
+  abrirModal(`
+    <div class="modal-cab"><h2>${p ? 'Editar producto' : 'Nuevo producto'}</h2><button class="x" onclick="cerrarModal()" aria-label="Cerrar">✕</button></div>
+    <div class="fila">
+      <div><label for="fCodigo">Código</label><input id="fCodigo" value="${p ? esc(p.codigo) : ''}" ${p ? 'readonly' : ''} placeholder="Ej.: P001 o código de barras"></div>
+      <div><label for="fCat">Categoría</label><input id="fCat" list="dlCats" value="${p ? esc(p.categoria || '') : ''}" autocomplete="off"><datalist id="dlCats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+    </div>
+    <label for="fNombre">Nombre</label><input id="fNombre" value="${p ? esc(p.nombre) : ''}">
+    <div class="fila">
+      <div><label for="fCosto">Costo $</label><input id="fCosto" inputmode="decimal" value="${p ? fmt(p.costo) : ''}"></div>
+      <div><label for="fPrecio">Precio de venta $</label><input id="fPrecio" inputmode="decimal" value="${p ? fmt(p.precio) : ''}"></div>
+    </div>
+    <div id="fSug" class="sug oculto"></div>
+    <div class="fila">
+      <div><label for="fMin">Avisar cuando queden</label><input id="fMin" inputmode="decimal" value="${p ? cant(p.minimo || 0) : '0'}"></div>
+      ${p ? `<div><label>Stock actual</label><input value="${cant(p.stock)}" readonly title="El stock cambia con cargas, descargas y ventas"></div>`
+          : `<div><label for="fIni">Stock inicial</label><input id="fIni" inputmode="decimal" value="0"></div>`}
+    </div>
+    <div class="acciones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn pri" onclick="guardarProducto(${p ? 'true' : 'false'})">Guardar</button></div>`);
+  ['fCosto', 'fPrecio', 'fCat'].forEach(id => $(id).addEventListener('input', sugProducto));
+  sugProducto();
+  $(p ? 'fNombre' : 'fCodigo').focus();
+}
+function sugProducto() {
+  const c = num($('fCosto').value), pr = num($('fPrecio').value), s = sugerido(c, $('fCat').value);
+  const box = $('fSug');
+  box.classList.toggle('oculto', !s);
+  if (!s) return;
+  box.innerHTML = `Precio sugerido: <b>${usd(s.precio)}</b> <span class="suave">(${s.ganancia}% de ganancia + ${cfg().precios.colchon}% de colchón)</span>
+    <button class="btn-texto" onclick="$('fPrecio').value='${fmt(s.precio)}';sugProducto()">Usar este precio</button>
+    ${pr > 0 && c > 0 ? `<div class="suave" style="margin-top:4px">Con tu precio ganas ${String(Math.round((pr - c) / c * 1000) / 10).replace('.', ',')}% sobre el costo.</div>` : ''}`;
+}
+async function guardarProducto(editar) {
+  const codigo = $('fCodigo').value.trim(), nombre = $('fNombre').value.trim(), categoria = $('fCat').value.trim();
+  const costo = num($('fCosto').value || 0), precio = num($('fPrecio').value), minimo = num($('fMin').value || 0);
+  const ini = editar ? 0 : num($('fIni').value || 0);
+  if (!codigo || !nombre) return toast('El código y el nombre son obligatorios.', 'err');
+  if (!(precio >= 0) || $('fPrecio').value.trim() === '') return toast('Escribe el precio de venta.', 'err');
+  if (!(costo >= 0) || !(minimo >= 0) || !(ini >= 0)) return toast('Revisa los números.', 'err');
+  if (!editar && producto(codigo)) return toast('Ya existe un producto con el código ' + codigo + '.', 'err');
+  const ok = await cambio(() => op('producto', {
+    codigo, nombre, categoria, precio: r2(precio), costo: r2(costo), minimo: r3(minimo), stockInicial: editar ? 0 : r3(ini), usuario: S.caja.cajero || ''
+  }));
+  if (!ok) return;
+  cerrarModal(); toast(editar ? '✅ Producto actualizado' : '✅ Producto creado'); refrescar();
+}
+async function subirSugeridos() {
+  const bajos = catalogo().map(p => ({ p, s: sugerido(p.costo, p.categoria) })).filter(x => x.s && x.p.precio < x.s.precio);
+  if (!bajos.length) return toast('Todos los precios están iguales o por encima del sugerido.');
+  const muestra = bajos.slice(0, 12).map(x => '• ' + x.p.nombre + ': ' + usd(x.p.precio) + ' → ' + usd(x.s.precio)).join('\n');
+  if (!confirm(bajos.length + ' producto(s) están por debajo del sugerido:\n\n' + muestra + (bajos.length > 12 ? '\n…' : '') + '\n\n¿Subirlos al sugerido? (Nunca se bajan precios.)')) return;
+  const ok = await cambio(() => bajos.map(x => op('producto', {
+    codigo: x.p.codigo, nombre: x.p.nombre, categoria: x.p.categoria || '', precio: x.s.precio, costo: x.p.costo, minimo: x.p.minimo || 0, stockInicial: 0
+  })));
+  if (ok) { toast('✅ ' + bajos.length + ' precio(s) actualizados'); refrescar(); }
+}
+
+/* ================================================================
+   AJUSTES
+   ================================================================ */
+function vistaAjustes() {
+  $('vista').innerHTML = `
+  <div class="tres">
+    <section class="panel">
+      <h2>Conexión con Google Sheets</h2>
+      <label for="ajUrl">URL del servidor</label><input id="ajUrl" value="${esc(S.ajustes.url)}" placeholder="https://script.google.com/macros/s/…/exec">
+      <label for="ajClave">Clave</label><input id="ajClave" value="${esc(S.ajustes.clave)}">
+      <button class="btn pri grande" onclick="guardarConexion()">Guardar y sincronizar</button>
+      <p class="suave">Encuentras ambos datos en tu hoja de Google, menú 🧾 Caja → Ver enlaces y clave.</p>
+    </section>
+    <section class="panel" id="ajEstado"></section>
+    <section class="panel">
+      <h2>Respaldo</h2>
+      <p class="suave">Descarga una copia de todo lo que tiene esta PC (incluido lo que falta por enviar). Guárdala en un pendrive de vez en cuando.</p>
+      <button class="btn" style="width:100%" onclick="descargarRespaldo()">Descargar respaldo</button>
+      <p class="suave" style="margin-top:16px">Código de esta caja: <b>${esc(S.ajustes.dispositivo)}</b></p>
+      <button class="btn peligro" style="width:100%;margin-top:8px" onclick="restablecer()">Borrar datos de esta PC</button>
+    </section>
+  </div>`;
+  pintarAjustesEstado();
+}
+function pintarAjustesEstado() {
+  const box = $('ajEstado'); if (!box) return;
+  const n = S.cola.length;
+  box.innerHTML = `
+    <h2>Estado</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${n}</div><div class="l">Registros por enviar</div></div>
+      <div class="kpi"><div class="v" style="font-size:16px">${S.sync.ultimo ? hace(S.sync.ultimo) : 'Nunca'}</div><div class="l">Última sincronización</div></div>
+    </div>
+    ${S.sync.error ? `<p class="error-sync">${esc(S.sync.error)}</p>` : ''}
+    <p class="suave">${navigator.onLine ? 'Hay conexión a internet.' : 'Sin internet: todo se guarda en esta PC y se enviará solo cuando vuelva la señal.'}</p>
+    <button class="btn" style="width:100%" onclick="sincronizar(true)">Sincronizar ahora</button>
+    ${S.sync.errores.length ? `<h2 style="margin-top:16px">Registros con error</h2>
+      ${S.sync.errores.slice().reverse().map(e => `<div class="error-sync">${fechaTxt(e.fecha)} · ${esc(e.tipo)}: ${esc(e.error)}</div>`).join('')}
+      <button class="btn-texto" onclick="limpiarErrores()">Limpiar lista</button>` : ''}`;
+}
+async function guardarConexion() {
+  const url = $('ajUrl').value.trim(), clave = $('ajClave').value.trim();
+  if (url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) return toast('La URL debe ser la de tu aplicación web de Apps Script.', 'err');
+  const ok = await cambio(() => { S.ajustes.url = url; S.ajustes.clave = clave; return null; });
+  if (ok) sincronizar(true);
+}
+async function limpiarErrores() {
+  S.sync.errores = [];
+  await tx(['kv'], t => t.objectStore('kv').put({ ultimo: S.sync.ultimo, errores: [] }, 'sync'));
+  pintarAjustesEstado();
+}
+function descargarRespaldo() {
+  const datos = { version: 1, fecha: new Date().toISOString(), ajustes: Object.assign({}, S.ajustes, { clave: '' }), caja: S.caja, contadores: S.contadores, pendientes: S.cola, catalogo: S.catalogo };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 1)], { type: 'application/json' }));
+  a.download = 'respaldo-caja-' + hoyISO() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function restablecer() {
+  if (S.cola.length) return toast('Hay ' + S.cola.length + ' registros sin enviar. Sincroniza antes de borrar.', 'err');
+  if (S.caja.abierta) return toast('Cierra la caja antes de borrar los datos.', 'err');
+  if (!confirm('Esto borra productos, ajustes y caja de ESTA PC (tu hoja de Google no se toca). ¿Continuar?')) return;
+  await tx(['kv', 'cola'], t => { t.objectStore('kv').clear(); t.objectStore('cola').clear(); });
+  location.reload();
+}
+
+/* ================================================================
+   TASA, MODAL E INICIO
+   ================================================================ */
+function modalTasa() {
+  abrirModal(`
+    <div class="modal-cab"><h2>Tasa del día</h2><button class="x" onclick="cerrarModal()" aria-label="Cerrar">✕</button></div>
+    <label for="tTasa">Bolívares por dólar</label>
+    <input id="tTasa" inputmode="decimal" value="${S.ajustes.tasa ? fmt(S.ajustes.tasa) : ''}" placeholder="Ej.: 857,01">
+    <p class="suave">Cada venta guarda la tasa con la que se hizo, así que cambiarla no afecta las ventas anteriores.</p>
+    <div class="acciones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn pri" onclick="guardarTasa()">Guardar tasa</button></div>`);
+  $('tTasa').addEventListener('keydown', e => { if (e.key === 'Enter') guardarTasa(); });
+  $('tTasa').select();
+}
+async function guardarTasa() {
+  const t = num($('tTasa').value);
+  if (!(t > 0)) return toast('Escribe una tasa válida.', 'err');
+  const ok = await cambio(() => { S.ajustes.tasa = t; S.ajustes.tasaFecha = hoyISO(); return null; });
+  if (!ok) return;
+  cerrarModal(); pintarEstado(); refrescar(); toast('Tasa actualizada: ' + bs(t));
+}
+
+function abrirModal(html) { $('modalCaja').innerHTML = html; $('modal').classList.remove('oculto'); }
+function cerrarModal() { $('modal').classList.add('oculto'); $('modalCaja').innerHTML = ''; S.cobro = null; if (S.vista === 'vender' && $('buscar')) $('buscar').focus(); }
+
+async function iniciar() {
+  try { await abrirDB(); }
+  catch (e) { $('vista').innerHTML = '<div class="panel">No se pudo abrir el almacenamiento local de este navegador. Usa Chrome o Edge actualizado.</div>'; return; }
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+  const [aj, cat, caja, cont, car, sync, cola] = await Promise.all([
+    leer('kv', 'ajustes'), leer('kv', 'catalogo'), leer('kv', 'caja'), leer('kv', 'contadores'), leer('kv', 'carrito'), leer('kv', 'sync'), leer('cola')
+  ]);
+  if (aj) Object.assign(S.ajustes, aj);
+  if (cat) S.catalogo = cat;
+  if (caja) S.caja = caja;
+  if (cont) S.contadores = cont;
+  if (car && Array.isArray(car.items)) S.carrito = Object.assign(nuevoCarrito(), car);
+  if (sync) { S.sync.ultimo = sync.ultimo || 0; S.sync.errores = sync.errores || []; }
+  S.cola = (cola || []).sort((a, b) => a.ts - b.ts);
+  if (!S.ajustes.dispositivo) {
+    const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    S.ajustes.dispositivo = L[Math.floor(Math.random() * L.length)] + L[Math.floor(Math.random() * L.length)];
+    await guardar(null);
+  }
+
+  document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => irA(b.dataset.vista)));
+  $('modal').addEventListener('click', e => { if (e.target === $('modal')) cerrarModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('modal').classList.contains('oculto')) cerrarModal();
+    if (e.key === 'F2' && S.vista === 'vender' && $('modal').classList.contains('oculto')) { e.preventDefault(); abrirCobro(); }
+  });
+  window.addEventListener('online', () => { pintarEstado(); sincronizar(false); });
+  window.addEventListener('offline', pintarEstado);
+  setInterval(() => { pintarEstado(); sincronizar(false); }, 60000);
+
+  pintarEstado();
+  irA(S.ajustes.url || catalogo().length ? 'vender' : 'ajustes');
+  if (S.carrito.items.length) toast('Se recuperó la venta que estaba en curso.');
+  sincronizar(false);
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+iniciar();
+</script>
+</body>
+</html>
